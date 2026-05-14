@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    
+    /* Desative esta linha para parar os erros de import */
+    "verbatimModuleSyntax": false,
+    
+    /* Configurações extras para evitar bugs */
+    "noUncheckedIndexedAccess": true,
+    "isolatedModules": true
+  }
+}
