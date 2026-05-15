@@ -15,6 +15,7 @@ function App() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     axios.get('http://localhost:3001/customers')
@@ -37,14 +38,17 @@ function App() {
   return (
     <div className="min-h-screen bg-[#f8fafc] p-4 md:p-8 font-sans text-[#1e293b]">
       <div className="max-w-7xl mx-auto">
-        
+
         {/* Header Estilo CRM */}
         <header className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-2xl font-bold text-[#0f172a]">Gestão de Contratos</h1>
           </div>
-          <button className="bg-[#2563eb] text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-all shadow-sm text-sm">
-            <Plus size={18} /> Novo Contrato
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-[#2563eb] text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-all shadow-sm text-sm"
+          >
+            <Plus size={18} /> Novo Cliente
           </button>
         </header>
 
@@ -66,7 +70,7 @@ function App() {
 
         {/* Filtros e Tabela */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          
+
           {/* Barra de Filtros */}
           <div className="p-4 border-b border-slate-100 bg-white flex gap-4">
             <div className="relative flex-grow">
@@ -139,6 +143,46 @@ function App() {
           </div>
         </div>
       </div>
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h2 className="text-xl font-bold text-gray-800">Cadastrar Novo Cliente</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <Plus size={24} className="rotate-45" />
+              </button>
+            </div>
+
+            <form className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Razão Social</label>
+                <input type="text" className="w-full p-2.5 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Ex: ProCiber Tecnologia LTDA" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">CNPJ / CPF</label>
+                <input type="text" className="w-full p-2.5 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="00.000.000/0001-00" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">E-mail Financeiro</label>
+                <input type="email" className="w-full p-2.5 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="financeiro@email.com" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Cidade</label>
+                <input type="text" className="w-full p-2.5 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Ex: Cascavel" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Estado (UF)</label>
+                <input type="text" maxLength={2} className="w-full p-2.5 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="PR" />
+              </div>
+
+              <div className="md:col-span-2 mt-4 flex gap-3">
+                <button type="submit" className="flex-grow bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-all">Salvar Cliente</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 border border-gray-200 text-gray-600 rounded-lg font-bold hover:bg-gray-50">Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
