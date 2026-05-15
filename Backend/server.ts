@@ -1,11 +1,14 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import cors from 'cors'; // 1. Importe o cors aqui
 
 const app = express();
 const prisma = new PrismaClient();
-const port = 3001; // Usaremos a 3001 para não conflitar com o Frontend depois
+const port = 3001;
 
+app.use(cors()); // 2. Libere o acesso para qualquer origem
 app.use(express.json());
+
 
 // Rota para listar todos os clientes (Visão da Matriz PRO CIBER)
 app.get('/customers', async (req, res) => {
