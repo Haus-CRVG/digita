@@ -1,80 +1,85 @@
-import fs from 'fs';
-import csv from 'csv-parser';
-import { PrismaClient } from '@prisma/client';
+import fs from "fs";
+import csv from "csv-parser";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 async function main() {
   const results: any[] = [];
-  console.log('--- Iniciando Leitura do CSV (Modo Diagnóstico) ---');
+  console.log(
+    "--- Iniciando Leitura do CSV (Modo Diagnóstico Inteligente) ---",
+  );
 
-  fs.createReadStream('clientesExportar (2).csv')
-    .pipe(csv({
-      mapHeaders: ({ header }) => header.trim().replace(/^\uFEFF/, '') // Remove o lixo do Excel (BOM)
-    })) 
-    .on('data', (data) => results.push(data))
-    .on('end', async () => {
+  // Certifique-se de que o arquivo .csv está na raiz da pasta Backend com este nome exato
+  fs.createReadStream("clientesExportar (2).csv")
+    .pipe(
+      csv({
+        mapHeaders: ({ header }) => header.trim().replace(/^\uFEFF/, ""), // Remove caracteres invisíveis do Excel (BOM)
+      }),
+    )
+    .on("data", (data) => results.push(data))
+    .on("end", async () => {
       console.log(`${results.length} linhas lidas.`);
-
-      if (results.length > 0) {
-        console.log('Exemplo da primeira linha lida:', results[0]);
-      }
 
       for (const row of results) {
         try {
-          // Mapeamento direto conforme o seu arquivo enviado
-          const nomeCliente = row['Cliente'] || row['cliente'];
-          const documento = row['CPF/CNPJ'] || row['cpf/cnpj'];
+          const nomeCliente = row["Cliente"] || row["cliente"];
+          const documento = row["CPF/CNPJ"] || row["cpf/cnpj"];
 
-          // Se não encontrar o nome, tenta ver se as chaves do objeto estão estranhas
-          if (!nomeCliente) {
-             // Log apenas para a primeira falha para não inundar o terminal
-             continue; 
+          if (!nomeCliente || !documento) {
+            continue;
           }
 
-          const emailFinanceiro = row['E-mail'] || row['email'] || 'pendente@email.com';
-          const revendaNome = row['Revenda'] || 'PRO CIBER';
+          const emailCliente =
+            row["E-mail"] || row["email"] || "comercial@prociber.com.br";
+          const revendaNome = row["Revenda"] || "PRO CIBER";
 
-          // 1. Upsert da Revenda
-          const emailRevenda = `${revendaNome.toLowerCase().replace(/\s/g, '')}@digita.com`;
+          // Mapeamento de status baseado na planilha ou definindo 'Ativo' como padrão inicial
+          const statusPlanilha = row["Status"] || row["status"] || "Ativo";
+
+          // 1. Garante que a revenda exista para não quebrar a chave estrangeira
+          const emailRevenda = `${revendaNome.toLowerCase().replace(/\s/g, "")}@digita.com`;
           const revenda = await prisma.user.upsert({
             where: { email: emailRevenda },
             update: {},
             create: {
               nome: revendaNome,
               email: emailRevenda,
-              senha: 'mudar123',
-              role: 'REVENDA'
-            }
+              senha: "mudar123",
+              role: "REVENDA",
+            },
           });
 
-          // 2. Upsert do Cliente
+          // 2. IMPORTAÇÃO INTELIGENTE: Atualiza dados e status mantendo as observações a salvo
           await prisma.customer.upsert({
             where: { cnpj_cpf: documento.trim() },
             update: {
               razao_social: nomeCliente.trim(),
-              email_financeiro: emailFinanceiro.trim(),
-              cidade: row['Cidade'] || '',
-              estado: row['Estado'] || '',
+              email: emailCliente.trim(),
+              cidade: row["Cidade"] || "",
+              estado: row["Estado"] || "",
+              status_cadastro: statusPlanilha.trim(),
+              // O campo 'observacoes' fica de fora do update para o CSV não apagar o que você digitou na tela!
             },
             create: {
               razao_social: nomeCliente.trim(),
               cnpj_cpf: documento.trim(),
-              email_financeiro: emailFinanceiro.trim(),
-              cidade: row['Cidade'] || '',
-              estado: row['Estado'] || '',
-              status_cadastro: 'PENDENTE',
-              user_id: revenda.id
-            }
+              email: emailCliente.trim(),
+              cidade: row["Cidade"] || "",
+              estado: row["Estado"] || "",
+              status_cadastro: statusPlanilha.trim(),
+              observacoes: "", // Nasce vazio se for um cliente inédito
+              user_id: revenda.id,
+            },
           });
 
-          console.log(`✅ Gravado: ${nomeCliente}`);
+          console.log(`✅ Processado com Sucesso: ${nomeCliente}`);
         } catch (err) {
-          console.error(`❌ Erro no processamento:`, err);
+          console.error(`❌ Erro no processamento desta linha:`, err);
         }
       }
 
-      console.log('--- Importação Concluída no Railway! ---');
+      console.log("--- Importação e Sincronização Concluídas com Sucesso! ---");
       await prisma.$disconnect();
     });
 }

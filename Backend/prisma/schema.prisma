@@ -12,9 +12,26 @@ model User {
   nome      String
   email     String   @unique
   senha     String
-  role      String   @default("REVENDA")
+  cnpj      String?  @unique
+  telefone  String?  // <-- Adicionado campo telefone para a Revenda
+  cidade    String?
+  estado    String?
+  status    String   @default("Ativo")
+  role      String   @default("REVENDA") // "MATRIZ" ou "REVENDA"
   leads     Lead[]
   customers Customer[]
+  subUsers  SubUser[] // <-- Uma revenda pode ter vários funcionários
+}
+
+model SubUser {
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  senha     String
+  telefone  String?
+  status    String   @default("Ativo")
+  user_id   String   // ID da Revenda Pai
+  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model Lead {
@@ -36,7 +53,7 @@ model Customer {
   cidade            String?
   estado            String?
   status_cadastro   String   @default("PENDENTE")
-  
+  observacoes       String?
   user_id           String
   user              User     @relation(fields: [user_id], references: [id])
   contract          Contract?
