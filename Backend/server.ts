@@ -32,35 +32,41 @@ app.get("/customers", async (req, res) => {
   }
 });
 
-app.post('/customers', async (req, res) => {
+app.post("/customers", async (req, res) => {
   try {
     // Pegamos 'email' diretamente da requisição
-    const { razao_social, cnpj_cpf, email, cidade, estado, telefone } = req.body;
+    const { razao_social, cnpj_cpf, email, cidade, estado, telefone } =
+      req.body;
 
     // Buscamos o primeiro usuário cadastrado para vincular
     const primeiroUsuario = await prisma.user.findFirst();
 
     if (!primeiroUsuario) {
-      return res.status(400).json({ error: 'Nenhum usuário cadastrado no sistema.' });
+      return res
+        .status(400)
+        .json({ error: "Nenhum usuário cadastrado no sistema." });
     }
 
     // Criamos o cliente com o campo unificado 'email'
     const customer = await prisma.customer.create({
-      data: { 
-        razao_social, 
-        cnpj_cpf, 
-        email, // Salvando no campo correto
-        cidade, 
-        estado, 
+      data: {
+        razao_social,
+        cnpj_cpf,
+        email, // Certifique-se de que o frontend está enviando a chave com este nome exato!
+        cidade,
+        estado,
         telefone,
-        userId: primeiroUsuario.id 
-      }
+        status_cadastro: "Em Atendimento", // ou o valor padrão de string/enum que você usa
+        user_id: "algum-id-temporario-ou-fixo", // se você não tiver autenticação ainda, coloque um valor padrão válido
+      },
     });
-    
+
     res.status(201).json(customer);
   } catch (error: any) {
     console.error("Erro interno no servidor:", error);
-    res.status(500).json({ error: 'Erro ao criar cliente.', details: error.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao criar cliente.", details: error.message });
   }
 });
 
