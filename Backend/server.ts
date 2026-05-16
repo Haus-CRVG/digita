@@ -47,7 +47,6 @@ app.post("/customers", async (req, res) => {
       observacoes,
     } = req.body;
 
-    // Vincula a uma revenda padrão temporária caso não venha informada
     let usuarioVinculo = await prisma.user.findFirst({
       where: { email: "haus@prociber.com.br" }
     });
@@ -228,11 +227,10 @@ app.get("/users/revendas", async (req, res) => {
       where: { role: "REVENDA" },
       orderBy: { nome: "asc" }
     });
-    // Força mapeamento caso o schema use 'role' mas o front espere propriedades adicionais
     const mapped = revendas.map((r: any) => ({
       id: r.id,
       nome: r.nome,
-      cnpj: r.cnpj || "00.000.000/0001-00", // fallback se campo opcional não existir
+      cnpj: r.cnpj || "00.000.000/0001-00", 
       email: r.email,
       telefone: r.telefone || "",
       cidade: r.cidade || "Cascavel",
@@ -256,7 +254,6 @@ app.post("/users/revendas", async (req, res) => {
         email,
         senha: senha || "mudar123",
         role: "REVENDA",
-        // Se seu schema estendeu o User com esses campos adicionais, eles serão salvos:
         ...(cnpj && { cnpj }),
         ...(telefone && { telefone }),
         ...(cidade && { cidade }),
@@ -338,59 +335,94 @@ app.post("/users/revendas/import", upload.single("file"), async (req, res) => {
 
 
 // ==========================================
-// ROTAS DE GERENCIAMENTO DE INTEGRANTES (SUBUSERS)
+// ROTAS DE GERENCIAMENTO DE INTEGRANTES CORRIGIDAS (BUG 1 RESOLVIDO)
 // ==========================================
 
-// Listar sub-usuários de uma revenda específica
+// Listar integrantes de uma revenda usando tags dinâmicas no campo role
 app.get("/users/revendas/:revendaId/subusers", async (req, res) => {
   try {
     const { revendaId } = req.params;
-    // Caso use uma tabela dedicada SubUser ou filtre por uma relação no User:
-    // Se estiver usando uma tabela dedicada 'subUser' no prisma:
-    const subUsers = await (prisma as any).subUser.findMany({
-      where: { revendaId: revendaId }
+    
+    // Busca na tabela User onde o role guarda o vínculo da revenda mãe
+    const subUsers = await prisma.user.findMany({
+      where: {
+        role: `INTEGRANTE_${revendaId}`
+      },
+      orderBy: { nome: "asc" }
     });
-    res.json(subUsers);
+
+    // Mapeia para o formato que seu frontend original espera
+    const mapped = subUsers.map((su: any) => ({
+      id: su.id,
+      nome: su.nome,
+      email: su.email,
+      telefone: su.telefone || "",
+      senha: su.senha,
+      status: su.status || "Ativo"
+    }));
+
+    res.json(mapped);
   } catch (error) {
-    // Se o modelo dinâmico falhar ou não estiver migrado, retorna array vazio para não quebrar o front
     res.json([]);
   }
 });
 
-// Adicionar um novo funcionário à revenda
+// Adicionar integrante à tabela User com tag de vínculo
 app.post("/users/revendas/:revendaId/subusers", async (req, res) => {
   try {
     const { revendaId } = req.params;
     const { nome, email, telefone, senha } = req.body;
 
-    const newSub = await (prisma as any).subUser.create({
+    const newSub = await prisma.user.create({
       data: {
         nome,
         email,
-        telefone,
         senha,
-        status: "Ativo",
-        revendaId: revendaId
-      }
+        role: `INTEGRANTE_${revendaId}`, // Vínculo seguro sem quebrar schema.prisma
+        ...(telefone && { telefone }),
+        status: "Ativo"
+      } as any
     });
-    res.status(201).json(newSub);
-  } catch (error) {
-    res.status(500).json({ error: "Erro ao criar integrante da equipe." });
+
+    res.status(201).json({
+      id: newSub.id,
+      nome: newSub.nome,
+      email: newSub.email,
+      telefone: (newSub as any).telefone || "",
+      senha: newSub.senha,
+      status: (newSub as any).status || "Ativo"
+    });
+  } catch (error: any) {
+    console.error("Erro ao criar funcionário:", error);
+    res.status(500).json({ error: "Erro ao criar integrante da equipe.", details: error.message });
   }
 });
 
-// Atualizar um funcionário da revenda (Ativar/Inativar/Editar)
+// Atualizar um funcionário da revenda
 app.put("/users/revendas/:revendaId/subusers/:subUserId", async (req, res) => {
   try {
     const { subUserId } = req.params;
     const { nome, email, telefone, senha, status } = req.body;
 
-    const updatedSubUser = await (prisma as any).subUser.update({
+    const updatedSubUser = await prisma.user.update({
       where: { id: subUserId },
-      data: { nome, email, telefone, senha, status: status || "Ativo" }
+      data: {
+        nome,
+        email,
+        senha,
+        ...(telefone && { telefone }),
+        status: status || "Ativo"
+      } as any
     });
 
-    res.json(updatedSubUser);
+    res.json({
+      id: updatedSubUser.id,
+      nome: updatedSubUser.nome,
+      email: updatedSubUser.email,
+      telefone: (updatedSubUser as any).telefone || "",
+      senha: updatedSubUser.senha,
+      status: (updatedSubUser as any).status || "Ativo"
+    });
   } catch (error: any) {
     res.status(500).json({ error: "Erro ao atualizar dados do funcionário." });
   }
@@ -400,7 +432,7 @@ app.put("/users/revendas/:revendaId/subusers/:subUserId", async (req, res) => {
 app.delete("/users/revendas/:revendaId/subusers/:subUserId", async (req, res) => {
   try {
     const { subUserId } = req.params;
-    await (prisma as any).subUser.delete({
+    await prisma.user.delete({
       where: { id: subUserId }
     });
     res.json({ message: "Funcionário removido com sucesso!" });

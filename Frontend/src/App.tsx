@@ -14,7 +14,8 @@ import {
   Pencil,
   Trash2,
   CheckCircle,
-  XCircle
+  XCircle,
+  ChevronDown
 } from "lucide-react";
 
 import logoImg from "./Logo.png";
@@ -54,10 +55,9 @@ interface SubUser {
 
 function App() {
   const [currentMenu, setCurrentMenu] = useState<"CLIENTES" | "REVENDAS">("CLIENTES");
+  const [submenuOpen, setSubmenuOpen] = useState(true); // Controle do submenu lateral
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(100);
 
   // ESTADOS DE CLIENTES
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -65,50 +65,92 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ razao_social: "", cnpj_cpf: "", email: "", cidade: "", estado: "", telefone: "", status_cadastro: "Ativo", observacoes: "" });
-  const [editFormData, setEditFormData] = useState({ razao_social: "", cnpj_cpf: "", email: "", cidade: "", estado: "", telefone: "", status_cadastro: "Ativo", observacoes: "" });
+  const [substituirCSV, setSubstituirCSV] = useState(false);
+
+  const [formData, setFormData] = useState({
+    razao_social: "",
+    cnpj_cpf: "",
+    email: "",
+    cidade: "",
+    estado: "",
+    telefone: "",
+    status_cadastro: "Ativo",
+    observacoes: ""
+  });
+
+  const [editFormData, setEditFormData] = useState({
+    razao_social: "",
+    cnpj_cpf: "",
+    email: "",
+    cidade: "",
+    estado: "",
+    telefone: "",
+    status_cadastro: "Ativo",
+    observacoes: ""
+  });
 
   // ESTADOS DE REVENDAS
   const [revendas, setRevendas] = useState<Revenda[]>([]);
-  const [revendaStatusFilter, setRevendaStatusFilter] = useState("TODOS");
   const [isRevendaModalOpen, setIsRevendaModalOpen] = useState(false);
+  const [isUnifiedModalOpen, setIsUnifiedModalOpen] = useState(false); // Modal da Engrenagem unificado
   const [selectedRevendaId, setSelectedRevendaId] = useState<string | null>(null);
-  const [selectedRevendaNome, setSelectedRevendaNome] = useState("");
   const [subUsers, setSubUsers] = useState<SubUser[]>([]);
 
-  // Modais de Revendas separados
-  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false); 
-  const [isEditRevendaModalOpen, setIsEditRevendaModalOpen] = useState(false); 
+  const [revendaFormData, setRevendaFormData] = useState({
+    nome: "",
+    cnpj: "",
+    email: "",
+    telefone: "",
+    cidade: "",
+    estado: "",
+    status: "Ativo",
+    senha: "mudar123"
+  });
 
-  const [revendaFormData, setRevendaFormData] = useState({ nome: "", cnpj: "", email: "", telefone: "", cidade: "", estado: "", senha: "mudar123", status: "Ativo" });
-  const [editRevendaFormData, setEditRevendaFormData] = useState({ nome: "", cnpj: "", email: "", telefone: "", cidade: "", estado: "", senha: "mudar123", status: "Ativo" });
+  const [editRevendaFormData, setEditRevendaFormData] = useState({
+    nome: "",
+    cnpj: "",
+    email: "",
+    telefone: "",
+    cidade: "",
+    estado: "",
+    status: "Ativo",
+    senha: "mudar123"
+  });
 
-  // Estado de Integrantes da Equipe
-  const [newSubUserFormData, setNewSubUserFormData] = useState({ nome: "", email: "", telefone: "", senha: "" });
+  // ESTADOS DE INTEGRANTES (SUBUSERS) DENTRO DA ENGRENAGEM
+  const [newSubUserFormData, setNewSubUserFormData] = useState({
+    nome: "",
+    email: "",
+    telefone: "",
+    senha: ""
+  });
   const [editingSubUser, setEditingSubUser] = useState<SubUser | null>(null);
-  const [editSubUserFormData, setEditSubUserFormData] = useState({ nome: "", email: "", telefone: "", senha: "", status: "Ativo" });
+  const [editSubUserFormData, setEditSubUserFormData] = useState({
+    nome: "",
+    email: "",
+    telefone: "",
+    senha: "",
+    status: "Ativo"
+  });
 
   useEffect(() => {
     fetchCustomers();
     fetchRevendas();
   }, []);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, statusFilter, revendaStatusFilter, itemsPerPage, currentMenu]);
-
   const fetchCustomers = () => {
     setLoading(true);
     axios.get("http://localhost:3001/customers")
       .then((res) => { setCustomers(res.data); setLoading(false); })
-      .catch((err) => { console.error(err); setLoading(false); });
+      .catch(() => setLoading(false));
   };
 
   const fetchRevendas = () => {
     setLoading(true);
     axios.get("http://localhost:3001/users/revendas")
       .then((res) => { setRevendas(res.data); setLoading(false); })
-      .catch((err) => { console.error(err); setLoading(false); });
+      .catch(() => setLoading(false));
   };
 
   const fetchSubUsers = (revendaId: string) => {
@@ -117,73 +159,97 @@ function App() {
       .catch((err) => console.error(err));
   };
 
-  // HANDLERS CLIENTES
-  const handleCsvImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const desejaSubstituir = window.confirm("Deseja SUBSTITUIR os dados de clientes duplicados pelas novas informações do CSV?");
-    const fData = new FormData();
-    fData.append("file", file);
-    fData.append("substituir", desejaSubstituir ? "true" : "false");
-    try {
-      alert("Processando CSV de Clientes...");
-      const response = await axios.post("http://localhost:3001/customers/import", fData, { headers: { "Content-Type": "multipart/form-data" } });
-      alert(`Importação Concluída!\n\n📥 Novos: ${response.data.inseridos}\n🔄 Atualizados: ${response.data.atualizados}\n🚫 Ignorados: ${response.data.ignorados}`);
-      e.target.value = "";
-      fetchCustomers();
-    } catch (err) { alert("Erro ao importar CSV."); }
+  // AO CLICAR NA ENGRENAGEM (ABRE DADOS CADASTRAIS + USUÁRIOS ABAIXO)
+  const handleOpenGearModal = (revenda: Revenda) => {
+    setSelectedRevendaId(revenda.id);
+    setEditRevendaFormData({
+      nome: revenda.nome,
+      cnpj: revenda.cnpj,
+      email: revenda.email,
+      telefone: revenda.telefone || "",
+      cidade: revenda.cidade,
+      estado: revenda.estado,
+      status: revenda.status,
+      senha: revenda.senha || "mudar123"
+    });
+    setSubUsers([]);
+    setEditingSubUser(null);
+    setNewSubUserFormData({ nome: "", email: "", telefone: "", senha: "" });
+    fetchSubUsers(revenda.id);
+    setIsUnifiedModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // SUBMISSÃO CADASTRO REVENDA (DADOS CADASTRAIS SUPERIOR)
+  const handleEditRevendaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRevendaId) return;
+    try {
+      await axios.put(`http://localhost:3001/users/revendas/${selectedRevendaId}`, editRevendaFormData);
+      alert("Dados cadastrais da revenda atualizados com sucesso!");
+      fetchRevendas();
+    } catch (err) {
+      alert("Erro ao salvar dados cadastrais.");
+    }
+  };
+
+  // SUBMISSÃO NOVO INTEGRANTE (EQUIPE INFERIOR)
+  const handleAddSubUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRevendaId) return;
+    try {
+      await axios.post(`http://localhost:3001/users/revendas/${selectedRevendaId}/subusers`, newSubUserFormData);
+      alert("Usuário adicionado à equipe com sucesso!");
+      setNewSubUserFormData({ nome: "", email: "", telefone: "", senha: "" });
+      fetchSubUsers(selectedRevendaId);
+    } catch (err) {
+      alert("Erro ao cadastrar usuário para a revenda.");
+    }
+  };
+
+  // SUBMISSÃO EDIÇÃO INTEGRANTE
+  const handleEditSubUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRevendaId || !editingSubUser) return;
+    try {
+      await axios.put(`http://localhost:3001/users/revendas/${selectedRevendaId}/subusers/${editingSubUser.id}`, editSubUserFormData);
+      alert("Dados do integrante atualizados!");
+      setEditingSubUser(null);
+      fetchSubUsers(selectedRevendaId);
+    } catch (err) {
+      alert("Erro ao atualizar dados do integrante.");
+    }
+  };
+
+  const handleDeleteSubUser = async (subUserId: string) => {
+    if (!selectedRevendaId) return;
+    if (!window.confirm("Deseja realmente remover este usuário da equipe?")) return;
+    try {
+      await axios.delete(`http://localhost:3001/users/revendas/${selectedRevendaId}/subusers/${subUserId}`);
+      fetchSubUsers(selectedRevendaId);
+    } catch (err) {
+      alert("Erro ao remover usuário.");
+    }
+  };
+
+  // HANDLERS ADICIONAIS ORIGINAIS (CLIENTES E CRIAÇÃO REVENDA)
+  const handleCustomerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await axios.post("http://localhost:3001/customers", formData);
       setIsModalOpen(false);
       setFormData({ razao_social: "", cnpj_cpf: "", email: "", cidade: "", estado: "", telefone: "", status_cadastro: "Ativo", observacoes: "" });
-      alert("Cliente cadastrado com sucesso!");
       fetchCustomers();
-    } catch (err) { alert("Erro ao salvar cliente."); }
+    } catch (err) { alert("Erro ao cadastrar cliente."); }
   };
 
-  const handleEditClick = (customer: Customer) => {
-    setSelectedCustomerId(customer.id);
-    setEditFormData({
-      razao_social: customer.razao_social,
-      cnpj_cpf: customer.cnpj_cpf,
-      email: customer.email,
-      cidade: customer.cidade || "",
-      estado: customer.estado || "",
-      telefone: customer.telefone || "",
-      status_cadastro: customer.status_cadastro || "Ativo",
-      observacoes: customer.observacoes || "",
-    });
-    setIsEditModalOpen(true);
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
+  const handleEditCustomerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCustomerId) return;
     try {
       await axios.put(`http://localhost:3001/customers/${selectedCustomerId}`, editFormData);
       setIsEditModalOpen(false);
-      alert("Dados atualizados com sucesso!");
       fetchCustomers();
-    } catch (err) { alert("Erro ao salvar alterações."); }
-  };
-
-  // HANDLERS REVENDAS
-  const handleRevendaCsvImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const fData = new FormData();
-    fData.append("file", file);
-    try {
-      alert("Processando CSV de Revendas...");
-      const response = await axios.post("http://localhost:3001/users/revendas/import", fData, { headers: { "Content-Type": "multipart/form-data" } });
-      alert(`Importação de Revendas Concluída!\n\n📥 Cadastradas: ${response.data.inseridos}\n🚫 Ignoradas: ${response.data.ignorados}`);
-      e.target.value = "";
-      fetchRevendas();
-    } catch (err) { alert("Erro ao importar revendas."); }
+    } catch (err) { alert("Erro ao atualizar cliente."); }
   };
 
   const handleRevendaSubmit = async (e: React.FormEvent) => {
@@ -191,221 +257,180 @@ function App() {
     try {
       await axios.post("http://localhost:3001/users/revendas", revendaFormData);
       setIsRevendaModalOpen(false);
-      setRevendaFormData({ nome: "", cnpj: "", email: "", telefone: "", cidade: "", estado: "", senha: "mudar123", status: "Ativo" });
-      alert("Revenda cadastrada com sucesso!");
+      setRevendaFormData({ nome: "", cnpj: "", email: "", telefone: "", cidade: "", estado: "", status: "Ativo", senha: "mudar123" });
       fetchRevendas();
     } catch (err) { alert("Erro ao cadastrar revenda."); }
   };
 
-  const handleEditRevendaClick = (revenda: Revenda) => {
-    setSelectedRevendaId(revenda.id);
-    setEditRevendaFormData({
-      nome: revenda.nome,
-      cnpj: revenda.cnpj || "",
-      email: revenda.email,
-      telefone: revenda.telefone || "",
-      cidade: revenda.cidade || "",
-      estado: revenda.estado || "",
-      senha: revenda.senha || "mudar123",
-      status: revenda.status || "Ativo"
-    });
-    setIsEditRevendaModalOpen(true);
-  };
+  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>, tipo: "CLIENTES" | "REVENDAS") => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    const formDataCSV = new FormData();
+    formDataCSV.append("file", file);
+    if (tipo === "CLIENTES") formDataCSV.append("substituir", substituirCSV ? "true" : "false");
 
-  const handleEditRevendaSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRevendaId) return;
+    const endpoint = tipo === "CLIENTES" ? "/customers/import" : "/users/revendas/import";
     try {
-      await axios.put(`http://localhost:3001/users/revendas/${selectedRevendaId}`, editRevendaFormData);
-      setIsEditRevendaModalOpen(false);
-      alert("Revenda atualizada com sucesso!");
-      fetchRevendas();
-    } catch (err) { alert("Erro ao atualizar revenda."); }
+      const res = await axios.post(`http://localhost:3001${endpoint}`, formDataCSV, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      alert(res.data.message || "Importação realizada com sucesso!");
+      tipo === "CLIENTES" ? fetchCustomers() : fetchRevendas();
+    } catch (err) {
+      alert("Erro ao processar arquivo CSV.");
+    }
   };
 
-  const handleRowRevendaClick = (revenda: Revenda) => {
-    setSelectedRevendaId(revenda.id);
-    setSelectedRevendaNome(revenda.nome);
-    setSubUsers([]);
-    setEditingSubUser(null);
-    fetchSubUsers(revenda.id);
-    setIsTeamModalOpen(true);
-  };
-
-  // HANDLERS INTEGRANTES (SUBUSERS)
-  const handleAddSubUserSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRevendaId) return;
-    try {
-      await axios.post(`http://localhost:3001/users/revendas/${selectedRevendaId}/subusers`, newSubUserFormData);
-      alert("Funcionário adicionado com sucesso!");
-      setNewSubUserFormData({ nome: "", email: "", telefone: "", senha: "" });
-      fetchSubUsers(selectedRevendaId);
-    } catch (err) { alert("Erro ao cadastrar funcionário."); }
-  };
-
-  const startEditSubUser = (su: SubUser) => {
-    setEditingSubUser(su);
-    setEditSubUserFormData({
-      nome: su.nome,
-      email: su.email,
-      telefone: su.telefone || "",
-      senha: su.senha || "",
-      status: su.status || "Ativo"
-    });
-  };
-
-  const handleEditSubUserSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRevendaId || !editingSubUser) return;
-    try {
-      await axios.put(`http://localhost:3001/users/revendas/${selectedRevendaId}/subusers/${editingSubUser.id}`, editSubUserFormData);
-      alert("Dados do funcionário atualizados!");
-      setEditingSubUser(null);
-      fetchSubUsers(selectedRevendaId);
-    } catch (err) { alert("Erro ao atualizar funcionário."); }
-  };
-
-  const handleDeleteSubUser = async (subUserId: string) => {
-    if (!selectedRevendaId) return;
-    if (!window.confirm("Tem certeza que deseja remover este funcionário? Ele perderá acesso ao sistema.")) return;
-    try {
-      await axios.delete(`http://localhost:3001/users/revendas/${selectedRevendaId}/subusers/${subUserId}`);
-      alert("Funcionário removido com sucesso!");
-      fetchSubUsers(selectedRevendaId);
-    } catch (err) { alert("Erro ao remover funcionário."); }
-  };
-
-  // FILTROS
+  // FILTROS ORIGINAIS
   const filteredCustomers = customers.filter((c) => {
-    const matchS = c.razao_social.toLowerCase().includes(search.toLowerCase()) || c.cnpj_cpf.includes(search);
-    const matchSt = statusFilter === "TODOS" || (c.status_cadastro || "Ativo").trim().toUpperCase() === statusFilter;
-    return matchS && matchSt;
+    const matchesSearch = c.razao_social.toLowerCase().includes(search.toLowerCase()) || c.cnpj_cpf.includes(search);
+    const matchesStatus = statusFilter === "TODOS" || c.status_cadastro.toUpperCase() === statusFilter.toUpperCase();
+    return matchesSearch && matchesStatus;
   });
 
   const filteredRevendas = revendas.filter((r) => {
-    const matchS = r.nome.toLowerCase().includes(search.toLowerCase()) || (r.cnpj && r.cnpj.includes(search));
-    const matchSt = revendaStatusFilter === "TODOS" || (r.status || "Ativo").trim().toUpperCase() === revendaStatusFilter;
-    return matchS && matchSt;
+    return r.nome.toLowerCase().includes(search.toLowerCase()) || r.cnpj.includes(search);
   });
 
-  const activeListLength = currentMenu === "CLIENTES" ? filteredCustomers.length : filteredRevendas.length;
-  const isAllSelected = itemsPerPage === 0;
-  const totalPages = isAllSelected ? 1 : Math.ceil(activeListLength / itemsPerPage);
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-
-  const currentDisplayedCustomers = isAllSelected ? filteredCustomers : filteredCustomers.slice(indexOfFirstItem, indexOfLastItem);
-  const currentDisplayedRevendas = isAllSelected ? filteredRevendas : filteredRevendas.slice(indexOfFirstItem, indexOfLastItem);
-
   return (
-    <div className="flex min-h-screen bg-[#f8fafc] font-sans text-[#1e293b]">
+    <div className="flex min-h-screen bg-[#f8fafc] text-[#1e293b]">
       
-      {/* SIDEBAR LATERAL */}
+      {/* SIDEBAR LATERAL ORIGINAL RECONSTRUÍDA */}
       <aside className="w-64 bg-[#0f172a] text-slate-300 flex flex-col border-r border-slate-800 shrink-0">
-        <div className="p-5 border-b border-slate-800 flex flex-col items-center gap-2">
-          <img src={logoImg} alt="Pro Ciber" className="h-12 object-contain mb-1" />
+        <div className="p-6 border-b border-slate-800 flex flex-col items-center gap-2">
+          {/* ALTERE O TAMANHO DA LOGO AQUI ABAIXO: Deixei h-20, altere conforme desejar */}
+          <img src={logoImg} alt="Pro Ciber" className="h-20 w-auto object-contain mb-1" />
           <span className="text-[10px] bg-blue-500/20 text-blue-400 px-3 py-0.5 rounded-full font-mono font-bold tracking-widest">SISTEMA MATRIZ</span>
         </div>
+        
         <nav className="flex-grow p-4 space-y-1.5">
-          <button onClick={() => { setCurrentMenu("CLIENTES"); setSearch(""); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${currentMenu === "CLIENTES" ? "bg-blue-600 text-white shadow-md shadow-blue-600/10" : "hover:bg-slate-800 text-slate-400 hover:text-slate-200"}`}><FileText size={18} /> Gestão de Contratos</button>
-          <button onClick={() => { setCurrentMenu("REVENDAS"); setSearch(""); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${currentMenu === "REVENDAS" ? "bg-blue-600 text-white shadow-md shadow-blue-600/10" : "hover:bg-slate-800 text-slate-400 hover:text-slate-200"}`}><Users size={18} /> Cadastros Revendas</button>
+          <button onClick={() => setCurrentMenu("CLIENTES")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${currentMenu === "CLIENTES" ? "bg-blue-600 text-white shadow-md" : "hover:bg-slate-800 text-slate-400"}`}><FileText size={18} /> Gestão de Contratos</button>
+          
+          <div>
+            <button onClick={() => { setCurrentMenu("REVENDAS"); setSubmenuOpen(!submenuOpen); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold transition-all ${currentMenu === "REVENDAS" ? "bg-blue-600 text-white shadow-md" : "hover:bg-slate-800 text-slate-400"}`}>
+              <div className="flex items-center gap-3"><Users size={18} /> Cadastro Revendas</div>
+              <ChevronDown size={14} className={`transition-transform ${submenuOpen ? "rotate-180" : ""}`} />
+            </button>
+            
+            {/* SUBMENU INTEGRADO LOGO ABAIXO DA REVENDA */}
+            {submenuOpen && (
+              <div className="pl-9 mt-1 space-y-1">
+                <button onClick={() => { setCurrentMenu("REVENDAS"); setIsRevendaModalOpen(true); }} className="w-full text-left py-2 px-3 rounded-md text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-all flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Cadastrar Nova Revenda
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
         <div className="p-4 border-t border-slate-800 text-xs text-slate-500 text-center font-medium">Matriz Pro Ciber v2.0</div>
       </aside>
 
-      {/* COMPONENTE PRINCIPAL */}
-      <main className="flex-grow p-4 md:p-8 overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
-          
+      {/* PAINEL PRINCIPAL ORIGINAL */}
+      <main className="flex-grow p-8">
+        <div className="w-full px-8 mx-auto">
           <header className="flex justify-between items-center mb-8">
-            <h1 className="text-2xl font-bold text-[#0f172a]">{currentMenu === "CLIENTES" ? "Gestão de Contratos (Clientes)" : "Cadastro de Revendas Parceiras"}</h1>
-            <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-[#0f172a]">{currentMenu === "CLIENTES" ? "Gestão de Contratos" : "Cadastro de Revendas Parceiras"}</h1>
+              <p className="text-sm text-slate-500 mt-1">Painel administrativo de controle de carteiras e acessos</p>
+            </div>
+            
+            <div className="flex gap-3">
               {currentMenu === "CLIENTES" ? (
                 <>
-                  <label className="bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm text-sm cursor-pointer"><Upload size={17} /> Importar CSV<input type="file" accept=".csv" className="hidden" onChange={handleCsvImport} /></label>
-                  <button onClick={() => setIsModalOpen(true)} className="bg-[#2563eb] text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 shadow-sm text-sm"><Plus size={18} /> Novo Cliente</button>
+                  <label className="bg-slate-800 text-white px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2 hover:bg-slate-700 shadow-sm text-sm cursor-pointer"><Upload size={16} /> Importar Planilha (CSV)<input type="file" accept=".csv" className="hidden" onChange={(e) => handleCSVImport(e, "CLIENTES")} /></label>
+                  <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 hover:bg-blue-700 shadow-sm text-sm"><Plus size={18} /> Novo Contrato</button>
                 </>
               ) : (
                 <>
-                  <label className="bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm text-sm cursor-pointer"><Upload size={17} /> Importar CSV Revendas<input type="file" accept=".csv" className="hidden" onChange={handleRevendaCsvImport} /></label>
-                  <button onClick={() => setIsRevendaModalOpen(true)} className="bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 hover:bg-emerald-700 shadow-sm text-sm"><Plus size={18} /> Nova Revenda</button>
+                  <label className="bg-slate-800 text-white px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2 hover:bg-slate-700 shadow-sm text-sm cursor-pointer"><Upload size={16} /> Importar Revendas (CSV)<input type="file" accept=".csv" className="hidden" onChange={(e) => handleCSVImport(e, "REVENDAS")} /></label>
+                  <button onClick={() => setIsRevendaModalOpen(true)} className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 hover:bg-emerald-700 shadow-sm text-sm"><Plus size={18} /> Nova Revenda</button>
                 </>
               )}
             </div>
           </header>
 
-          {/* INDICADORES */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-600"><p className="text-xs font-bold text-gray-500 uppercase mb-2">{currentMenu === "CLIENTES" ? "Base Total de Clientes" : "Total de Revendas Unidas"}</p><p className="text-3xl font-bold text-slate-800">{currentMenu === "CLIENTES" ? customers.length.toLocaleString() : revendas.length.toLocaleString()}</p></div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-amber-500"><p className="text-xs font-bold text-gray-500 uppercase mb-2">Filtrados na Tela</p><p className="text-3xl font-bold text-slate-800">{activeListLength.toLocaleString()}</p></div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-emerald-500"><p className="text-xs font-bold text-gray-500 uppercase mb-2">Faturado Hoje</p><p className="text-3xl font-bold text-slate-800">R$ 12.450</p></div>
-          </div>
+          {/* ÁREA DE CONTEÚDO E FILTROS */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-white">
+              <div className="relative flex-grow max-w-md">
+                <Search className="absolute left-3 top-3 text-slate-400" size={18} />
+                <input type="text" placeholder={currentMenu === "CLIENTES" ? "Buscar por Razão Social ou CNPJ..." : "Buscar por Nome da Revenda ou CNPJ..."} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
 
-          {/* TABELAS DE DADOS */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-            <div className="p-4 bg-white flex flex-col md:flex-row gap-4 items-center justify-between border-b border-slate-100">
-              <div className="relative flex-grow w-full md:w-auto">
-                <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
-                <input type="text" placeholder={currentMenu === "CLIENTES" ? "Buscar cliente..." : "Buscar revenda..."} className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
-              </div>
-              <div className="flex gap-3 items-center">
-                <Filter size={15} className="text-slate-400" />
-                <select value={currentMenu === "CLIENTES" ? statusFilter : revendaStatusFilter} onChange={(e) => currentMenu === "CLIENTES" ? setStatusFilter(e.target.value) : setRevendaStatusFilter(e.target.value)} className="border border-slate-200 rounded-lg p-1 text-sm">
-                  <option value="TODOS">Todos os Status</option>
-                  <option value="ATIVO">Ativos</option>
-                  <option value="CANCELADO">Cancelados</option>
-                  <option value="CONGELADO">Congelados</option>
-                </select>
-              </div>
+              {currentMenu === "CLIENTES" && (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider"><Filter size={14} /> FILTRAR POR STATUS:</div>
+                  <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+                    {["TODOS", "ATIVO", "CANCELADO", "PENDENTE"].map((status) => (
+                      <button key={status} onClick={() => setStatusFilter(status)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === status ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>{status}</button>
+                    ))}
+                  </div>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 select-none ml-2 cursor-pointer"><input type="checkbox" className="rounded text-blue-600 border-slate-300" checked={substituirCSV} onChange={(e) => setSubstituirCSV(e.target.checked)} /> Substituir dados se CNPJ já existir no CSV</label>
+                </div>
+              )}
             </div>
 
+            {/* TABELAS ORIGINAIS RESTAURADAS */}
             <div className="overflow-x-auto">
-              {currentMenu === "CLIENTES" ? (
+              {loading ? (
+                <div className="p-12 text-center text-slate-400 font-medium">Carregando dados com segurança...</div>
+              ) : currentMenu === "CLIENTES" ? (
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-[#f1f5f9]">
-                    <tr>
-                      <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase">Cliente / CNPJ</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase">Cidade/UF</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase">Contato</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase">Status</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase text-right">Ações</th>
+                  <thead>
+                    <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      <th className="px-6 py-4">Razão Social / Cliente</th>
+                      <th className="px-6 py-4">CNPJ / CPF</th>
+                      <th className="px-6 py-4">E-mail Principal</th>
+                      <th className="px-6 py-4">Localização</th>
+                      <th className="px-6 py-4">Revenda Vinculada</th>
+                      <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4 text-right">Ações</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {loading ? (<tr><td colSpan={5} className="p-6 text-center text-slate-400">Carregando...</td></tr>) : currentDisplayedCustomers.map((customer) => (
-                      <tr key={customer.id} className="hover:bg-slate-50">
-                        <td className="px-6 py-4"><div className="font-bold text-sm">{customer.razao_social}</div><div className="text-xs font-mono text-slate-400">{customer.cnpj_cpf}</div></td>
-                        <td className="px-6 py-4 text-xs"><MapPin size={12} className="inline mr-1" />{customer.cidade} - {customer.estado}</td>
-                        <td className="px-6 py-4 text-xs"><div>{customer.email}</div><div className="text-slate-400">{customer.telefone}</div></td>
-                        <td className="px-6 py-4"><span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs">{customer.status_cadastro}</span></td>
-                        <td className="px-6 py-4 text-right"><button onClick={() => handleEditClick(customer)} className="text-slate-400 hover:text-blue-600"><Settings size={16} /></button></td>
+                  <tbody className="divide-y divide-slate-100 text-sm">
+                    {filteredCustomers.map((customer) => (
+                      <tr key={customer.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-bold text-slate-800">{customer.razao_social}</td>
+                        <td className="px-6 py-4 font-mono text-xs text-slate-600">{customer.cnpj_cpf}</td>
+                        <td className="px-6 py-4 text-slate-600">{customer.email}</td>
+                        <td className="px-6 py-4 text-slate-500 flex items-center gap-1 mt-0.5"><MapPin size={14} className="text-slate-400" /> {customer.cidade ? `${customer.cidade}-${customer.estado}` : "Não informado"}</td>
+                        <td className="px-6 py-4 font-medium text-slate-700">{(customer as any).user?.nome || "PRO CIBER MATRIZ"}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${customer.status_cadastro === "Ativo" ? "bg-emerald-50 text-emerald-600" : customer.status_cadastro === "Cancelado" ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"}`}>{customer.status_cadastro}</span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button onClick={() => { setSelectedCustomerId(customer.id); setEditFormData({ razao_social: customer.razao_social, cnpj_cpf: customer.cnpj_cpf, email: customer.email, cidade: customer.cidade || "", estado: customer.estado || "", telefone: customer.telefone || "", status_cadastro: customer.status_cadastro, observacoes: customer.observacoes || "" }); setIsEditModalOpen(true); }} className="text-slate-400 hover:text-blue-600 p-2"><Pencil size={16} /></button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               ) : (
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-[#f1f5f9]">
-                    <tr>
-                      <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase">Razão Social / CNPJ</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase">Cidade/UF</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase">Contato / Telefone</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase">Status</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase text-right">Ações</th>
+                  <thead>
+                    <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      <th className="px-6 py-4">Parceiro / Revenda</th>
+                      <th className="px-6 py-4">CNPJ</th>
+                      <th className="px-6 py-4">E-mail Comercial</th>
+                      <th className="px-6 py-4">Telefone</th>
+                      <th className="px-6 py-4">Cidade / UF</th>
+                      <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4 text-right">Configurações</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {loading ? (<tr><td colSpan={5} className="p-6 text-center text-slate-400">Carregando...</td></tr>) : currentDisplayedRevendas.map((revenda) => (
-                      <tr key={revenda.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => handleRowRevendaClick(revenda)}>
-                        <td className="px-6 py-4"><div className="font-bold text-sm">{revenda.nome}</div><div className="text-xs font-mono text-slate-400">{revenda.cnpj}</div></td>
-                        <td className="px-6 py-4 text-xs"><MapPin size={12} className="inline mr-1" />{revenda.cidade} - {revenda.estado}</td>
-                        <td className="px-6 py-4 text-xs"><div>{revenda.email}</div><div className="text-slate-400 font-mono mt-0.5">{revenda.telefone || "Sem Telefone"}</div></td>
-                        <td className="px-6 py-4"><span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">{revenda.status}</span></td>
+                  <tbody className="divide-y divide-slate-100 text-sm">
+                    {filteredRevendas.map((revenda) => (
+                      <tr key={revenda.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-bold text-slate-800">{revenda.nome}</td>
+                        <td className="px-6 py-4 font-mono text-xs text-slate-600">{revenda.cnpj}</td>
+                        <td className="px-6 py-4 text-slate-600">{revenda.email}</td>
+                        <td className="px-6 py-4 text-slate-500">{revenda.telefone || "(45) 99999-9999"}</td>
+                        <td className="px-6 py-4 text-slate-500">{revenda.cidade}-{revenda.estado}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${revenda.status === "Ativo" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>{revenda.status}</span>
+                        </td>
                         <td className="px-6 py-4 text-right">
-                          <button onClick={(e) => { e.stopPropagation(); handleEditRevendaClick(revenda); }} className="text-slate-400 hover:text-emerald-600 p-2">
-                            <Settings size={16} />
-                          </button>
+                          <button onClick={() => handleOpenGearModal(revenda)} className="text-slate-400 hover:text-blue-600 p-2 bg-slate-100 rounded-lg hover:bg-blue-50 transition-colors"><Settings size={16} /></button>
                         </td>
                       </tr>
                     ))}
@@ -417,139 +442,101 @@ function App() {
         </div>
       </main>
 
-      {/* MODAL DE INTEGRANTES (Abre ao clicar na linha da revenda) */}
-      {isTeamModalOpen && (
+      {/* MODAL DA ENGRENAGEM UNIFICADO (DADOS CADASTRAIS + INTEGRANTES DA EQUIPE) */}
+      {isUnifiedModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-4xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
-            <div className="p-6 bg-slate-50 border-b flex justify-between items-center">
+          <div className="bg-white rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+            <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Users size={20} className="text-emerald-600" /> Integrantes Cadastrados</h2>
-                <p className="text-xs text-slate-500 font-mono mt-0.5">Revenda: {selectedRevendaNome}</p>
+                <h2 className="text-lg font-bold text-slate-800">Gerenciamento Completo da Revenda</h2>
+                <p className="text-xs text-slate-400 font-medium mt-0.5">Modifique as informações cadastrais centrais e gerencie as contas dos usuários técnicos</p>
               </div>
-              <button onClick={() => setIsTeamModalOpen(false)} className="text-2xl font-bold">×</button>
+              <button onClick={() => setIsUnifiedModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-2xl font-semibold px-2">×</button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-grow space-y-6">
-              {editingSubUser ? (
-                <form onSubmit={handleEditSubUserSubmit} className="bg-amber-50/50 p-4 rounded-xl border border-amber-200 grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
-                  <div className="md:col-span-5 text-xs font-bold text-amber-700 flex items-center gap-1"><Pencil size={14} /> EDITANDO INTEGRANTE: {editingSubUser.nome}</div>
-                  <div className="md:col-span-1"><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nome</label><input required type="text" className="w-full p-2 border rounded-lg text-xs" value={editSubUserFormData.nome} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, nome: e.target.value })} /></div>
-                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Telefone</label><input type="text" className="w-full p-2 border rounded-lg text-xs" value={editSubUserFormData.telefone} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, telefone: e.target.value })} /></div>
-                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">E-mail</label><input required type="email" className="w-full p-2 border rounded-lg text-xs" value={editSubUserFormData.email} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, email: e.target.value })} /></div>
-                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Senha</label><input required type="text" className="w-full p-2 border rounded-lg text-xs font-mono" value={editSubUserFormData.senha} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, senha: e.target.value })} /></div>
-                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status</label><select className="w-full p-2 border rounded-lg text-xs" value={editSubUserFormData.status} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, status: e.target.value })}><option value="Ativo">Ativo</option><option value="Inativo">Inativo</option></select></div>
-                  <div className="md:col-span-5 flex gap-2 justify-end mt-1">
-                    <button type="submit" className="bg-amber-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Salvar Alterações</button>
-                    <button type="button" onClick={() => setEditingSubUser(null)} className="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs">Cancelar</button>
-                  </div>
-                </form>
-              ) : (
-                <form onSubmit={handleAddSubUserSubmit} className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                  <div className="md:col-span-4 text-xs font-bold text-slate-600 flex items-center gap-1"><UserPlus size={14} /> NOVO INTEGRANTE</div>
-                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nome Completo</label><input required type="text" placeholder="Ex: João Técnico" className="w-full p-2 border rounded-lg text-xs" value={newSubUserFormData.nome} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, nome: e.target.value })} /></div>
-                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Telefone</label><input type="text" placeholder="(45) 9999-9999" className="w-full p-2 border rounded-lg text-xs" value={newSubUserFormData.telefone} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, telefone: e.target.value })} /></div>
-                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">E-mail</label><input required type="email" placeholder="joao@email.com" className="w-full p-2 border rounded-lg text-xs" value={newSubUserFormData.email} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, email: e.target.value })} /></div>
-                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1"><Lock size={10} /> Senha</label><input required type="text" placeholder="Senha" className="w-full p-2 border rounded-lg text-xs font-mono" value={newSubUserFormData.senha} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, senha: e.target.value })} /></div>
-                  <div className="md:col-span-4"><button type="submit" className="w-full bg-slate-800 text-white py-2 rounded-lg text-xs font-bold">Adicionar Funcionário</button></div>
-                </form>
-              )}
+            <div className="p-6 overflow-y-auto flex-grow space-y-8">
+              
+              {/* BLOCO SUPERIOR: FORMULÁRIO DE DADOS CADASTRAIS DA REVENDA */}
+              <form onSubmit={handleEditRevendaSubmit} className="bg-slate-50/60 p-5 rounded-2xl border border-slate-200/80 grid grid-cols-3 gap-4">
+                <div className="col-span-3 text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">1. Dados Cadastrais da Empresa</div>
+                <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">RAZÃO SOCIAL</label><input required type="text" className="w-full p-2.5 border rounded-xl text-sm" value={editRevendaFormData.nome} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, nome: e.target.value })} /></div>
+                <div><label className="block text-xs font-bold text-slate-500 mb-1">CNPJ</label><input required type="text" className="w-full p-2.5 border rounded-xl text-sm font-mono" value={editRevendaFormData.cnpj} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, cnpj: e.target.value })} /></div>
+                <div><label className="block text-xs font-bold text-slate-500 mb-1">E-MAIL COMERCIAL</label><input required type="email" className="w-full p-2.5 border rounded-xl text-sm" value={editRevendaFormData.email} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, email: e.target.value })} /></div>
+                <div><label className="block text-xs font-bold text-slate-500 mb-1">TELEFONE</label><input type="text" className="w-full p-2.5 border rounded-xl text-sm" value={editRevendaFormData.telefone} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, telefone: e.target.value })} /></div>
+                <div><label className="block text-xs font-bold text-slate-500 mb-1">STATUS</label><select className="w-full p-2.5 border rounded-xl text-sm font-bold" value={editRevendaFormData.status} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, status: e.target.value })}><option value="Ativo">Ativo</option><option value="Cancelado">Cancelado</option></select></div>
+                <div className="col-span-3 flex justify-end pt-2"><button type="submit" className="bg-blue-600 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-blue-700 transition-colors">Salvar Alterações Cadastrais</button></div>
+              </form>
 
-              <div className="border rounded-xl overflow-hidden">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead className="bg-slate-100 font-bold text-slate-600">
-                    <tr>
-                      <th className="p-3">Nome</th>
-                      <th className="p-3">E-mail</th>
-                      <th className="p-3">Telefone</th>
-                      <th className="p-3">Senha</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3 text-right">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {subUsers.length === 0 ? (<tr><td colSpan={6} className="p-4 text-center text-slate-400">Nenhum funcionário vinculado ainda.</td></tr>) : (
-                      subUsers.map((su) => (
-                        <tr key={su.id} className="hover:bg-slate-50">
-                          <td className="p-3 font-bold text-slate-700">{su.nome}</td>
-                          <td className="p-3 text-slate-600 font-mono">{su.email}</td>
-                          <td className="p-3 text-slate-600">{su.telefone || "Não informado"}</td>
-                          <td className="p-3 text-slate-500 font-mono">{su.senha}</td>
-                          <td className="p-3">
-                            {su.status === "Inativo" ? (
-                              <span className="bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 w-max"><XCircle size={10} /> Inativo</span>
-                            ) : (
-                              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 w-max"><CheckCircle size={10} /> Ativo</span>
-                            )}
-                          </td>
-                          <td className="p-3 text-right flex justify-end gap-1.5">
-                            <button onClick={() => startEditSubUser(su)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-all"><Pencil size={14} /></button>
-                            <button onClick={() => handleDeleteSubUser(su.id)} className="p-1.5 text-slate-400 hover:text-rose-600 transition-all"><Trash2 size={14} /></button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+              <hr className="border-slate-200" />
+
+              {/* BLOCO INFERIOR: SUB-USUÁRIOS / INTEGRANTES DA EQUIPE */}
+              <div className="space-y-4">
+                <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider">2. Usuários Técnicos / Integrantes da Equipe</div>
+
+                {/* Alternância Dinâmica entre Formulário de Cadastro e de Edição de Funcionários */}
+                {editingSubUser ? (
+                  <form onSubmit={handleEditSubUserSubmit} className="bg-amber-50/60 p-4 rounded-2xl border border-amber-200 grid grid-cols-4 gap-3 items-end">
+                    <div className="col-span-4 text-xs font-bold text-amber-800">Modificando Usuário Selecionado</div>
+                    <div className="col-span-2"><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nome Técnico</label><input required type="text" className="w-full p-2 border rounded-xl text-xs" value={editSubUserFormData.nome} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, nome: e.target.value })} /></div>
+                    <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">E-mail</label><input required type="email" className="w-full p-2 border rounded-xl text-xs" value={editSubUserFormData.email} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, email: e.target.value })} /></div>
+                    <div className="flex gap-2"><button type="submit" className="bg-amber-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex-grow">Salvar</button><button type="button" onClick={() => setEditingSubUser(null)} className="bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs">Cancelar</button></div>
+                  </form>
+                ) : (
+                  <form onSubmit={handleAddSubUserSubmit} className="bg-slate-50 p-4 rounded-2xl border border-slate-200/70 grid grid-cols-4 gap-3 items-end">
+                    <div className="col-span-2"><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nome do Integrante</label><input required type="text" placeholder="Ex: Lucas Suporte" className="w-full p-2.5 bg-white border rounded-xl text-xs" value={newSubUserFormData.nome} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, nome: e.target.value })} /></div>
+                    <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">E-mail de Acesso</label><input required type="email" placeholder="lucas@revenda.com" className="w-full p-2.5 bg-white border rounded-xl text-xs" value={newSubUserFormData.email} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, email: e.target.value })} /></div>
+                    <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1"><Lock size={10} className="inline mr-1 text-slate-400"/>Senha Inicial</label><input required type="text" placeholder="SenhaForte123" className="w-full p-2.5 bg-white border rounded-xl text-xs font-mono" value={newSubUserFormData.senha} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, senha: e.target.value })} /></div>
+                    <button type="submit" className="col-span-4 bg-slate-900 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-colors"><UserPlus size={15}/> Cadastrar Integrante e Liberar Acesso</button>
+                  </form>
+                )}
+
+                {/* Tabela de listagem dos Integrantes cadastrados */}
+                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead className="bg-slate-50 font-bold text-slate-500 border-b border-slate-100">
+                      <tr>
+                        <th className="p-3.5 pl-5">Nome do Usuário</th>
+                        <th className="p-3.5">E-mail Técnico</th>
+                        <th className="p-3.5">Status da Conta</th>
+                        <th className="p-3.5 pr-5 text-right">Gerenciar</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {subUsers.length === 0 ? (
+                        <tr><td colSpan={4} className="p-6 text-center text-slate-400 font-medium">Nenhum integrante cadastrado para esta revenda parceira até o momento.</td></tr>
+                      ) : (
+                        subUsers.map((su) => (
+                          <tr key={su.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-3.5 pl-5 font-bold text-slate-800">{su.nome}</td>
+                            <td className="p-3.5 text-slate-600 font-mono">{su.email}</td>
+                            <td className="p-3.5"><span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-md font-bold text-[10px]">{su.status}</span></td>
+                            <td className="p-3.5 pr-5 text-right flex justify-end gap-3">
+                              <button onClick={() => { setEditingSubUser(su); setEditSubUserFormData({ nome: su.nome, email: su.email, telefone: su.telefone || "", senha: su.senha || "", status: su.status }); }} className="text-slate-400 hover:text-amber-600 p-1"><Pencil size={15} /></button>
+                              <button onClick={() => handleDeleteSubUser(su.id)} className="text-slate-400 hover:text-rose-600 p-1"><Trash2 size={15} /></button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL DE DADOS CADASTRAIS (Abre ao clicar na engrenagem) */}
-      {isEditRevendaModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-xl">
-            <div className="p-6 bg-slate-50 border-b flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">Dados Cadastrais da Revenda</h2>
-                <p className="text-xs text-slate-400 font-mono mt-0.5">Modo de Edição Geral</p>
-              </div>
-              <button onClick={() => setIsEditRevendaModalOpen(false)} className="text-2xl font-bold">×</button>
-            </div>
-            <form onSubmit={handleEditRevendaSubmit} className="p-6 grid grid-cols-2 gap-4">
-              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">RAZÃO SOCIAL</label><input required type="text" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.nome} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, nome: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">CNPJ</label><input type="text" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.cnpj} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, cnpj: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">TELEFONE</label><input type="text" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.telefone} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, telefone: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">E-MAIL PRINCIPAL</label><input required type="email" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.email} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, email: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">SENHA DA REVENDA</label><input type="text" className="w-full p-2 border rounded-xl text-sm font-mono" value={editRevendaFormData.senha} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, senha: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">CIDADE</label><input type="text" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.cidade} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, city: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">UF</label><input type="text" maxLength={2} className="w-full p-2 border rounded-xl text-sm text-center uppercase" value={editRevendaFormData.estado} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, estado: e.target.value.toUpperCase() })} /></div>
-              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">SITUAÇÃO DO CONTRATO</label><select className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.status} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, status: e.target.value })}><option value="Ativo">Ativo</option><option value="Cancelado">Cancelado</option><option value="Congelado">Congelado</option></select></div>
-              <div className="col-span-2 flex gap-3 mt-4"><button type="submit" className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">Salvar Dados da Revenda</button></div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* OUTROS MODAIS DA APLICAÇÃO */}
-      {isRevendaModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-xl">
-            <div className="p-6 bg-slate-50 border-b flex justify-between items-center"><h2 className="text-lg font-bold">Cadastrar Nova Revenda</h2><button onClick={() => setIsRevendaModalOpen(false)} className="text-xl font-bold">×</button></div>
-            <form onSubmit={handleRevendaSubmit} className="p-6 grid grid-cols-2 gap-4">
-              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Nome / Razão Social</label><input required type="text" className="w-full p-2 border rounded-xl" value={revendaFormData.nome} onChange={(e) => setRevendaFormData({ ...revendaFormData, nome: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">CNPJ</label><input type="text" className="w-full p-2 border rounded-xl" value={revendaFormData.cnpj} onChange={(e) => setRevendaFormData({ ...revendaFormData, cnpj: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Telefone Comercial</label><input type="text" className="w-full p-2 border rounded-xl" value={revendaFormData.telefone} onChange={(e) => setRevendaFormData({ ...revendaFormData, telefone: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">E-mail de Acesso</label><input required type="email" className="w-full p-2 border rounded-xl" value={revendaFormData.email} onChange={(e) => setRevendaFormData({ ...revendaFormData, email: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Senha Inicial</label><input type="text" className="w-full p-2 border rounded-xl" value={revendaFormData.senha} onChange={(e) => setRevendaFormData({ ...revendaFormData, senha: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Cidade</label><input type="text" className="w-full p-2 border rounded-xl" value={revendaFormData.cidade} onChange={(e) => setRevendaFormData({ ...revendaFormData, cidade: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">UF</label><input type="text" maxLength={2} className="w-full p-2 border rounded-xl uppercase text-center" value={revendaFormData.estado} onChange={(e) => setRevendaFormData({ ...revendaFormData, estado: e.target.value.toUpperCase() })} /></div>
-              <div className="col-span-2 flex gap-3 mt-4"><button type="submit" className="flex-grow bg-emerald-600 text-white p-3 rounded-xl font-bold">Salvar Revenda</button></div>
-            </form>
-          </div>
-        </div>
-      )}
-
+      {/* OUTROS MODAIS ORIGINAIS MANIPULADOS CORRETAMENTE */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-xl">
-            <div className="p-6 bg-slate-50 border-b flex justify-between items-center"><h2 className="text-lg font-bold">Cadastrar Novo Cliente</h2><button onClick={() => setIsModalOpen(false)} className="text-xl font-bold">×</button></div>
-            <form onSubmit={handleSubmit} className="p-6 grid grid-cols-2 gap-4">
-              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">RAZÃO SOCIAL</label><input required type="text" className="w-full p-2 border rounded-xl" value={formData.razao_social} onChange={(e) => setFormData({ ...formData, razao_social: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">CNPJ / CPF</label><input required type="text" className="w-full p-2 border rounded-xl" value={formData.cnpj_cpf} onChange={(e) => setFormData({ ...formData, cnpj_cpf: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">E-MAIL</label><input required type="email" className="w-full p-2 border rounded-xl" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
-              <div className="col-span-2 flex gap-3 mt-4"><button type="submit" className="flex-grow bg-blue-600 text-white p-3 rounded-xl font-bold">Salvar Cliente</button></div>
+          <div className="bg-white rounded-2xl w-full max-w-xl overflow-hidden shadow-xl p-6">
+            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-slate-800">Cadastrar Novo Contrato</h3><button onClick={() => setIsModalOpen(false)} className="text-xl">×</button></div>
+            <form onSubmit={handleCustomerSubmit} className="grid grid-cols-2 gap-3">
+              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">RAZÃO SOCIAL</label><input required type="text" className="w-full p-2 border rounded-xl text-sm" value={formData.razao_social} onChange={(e) => setFormData({ ...formData, razao_social: e.target.value })} /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">CNPJ / CPF</label><input required type="text" className="w-full p-2 border rounded-xl text-sm" value={formData.cnpj_cpf} onChange={(e) => setFormData({ ...formData, cnpj_cpf: e.target.value })} /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">E-MAIL</label><input required type="email" className="w-full p-2 border rounded-xl text-sm" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
+              <button type="submit" className="col-span-2 bg-blue-600 text-white py-2.5 rounded-xl font-bold mt-2 hover:bg-blue-700 transition-colors">Salvar Contrato</button>
             </form>
           </div>
         </div>
@@ -557,14 +544,28 @@ function App() {
 
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-xl">
-            <div className="p-6 bg-slate-50 border-b flex justify-between items-center"><h2 className="text-lg font-bold">Alterar Dados do Cliente</h2><button onClick={() => setIsEditModalOpen(false)} className="text-xl font-bold">×</button></div>
-            <form onSubmit={handleEditSubmit} className="p-6 grid grid-cols-2 gap-4">
-              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">RAZÃO SOCIAL</label><input required type="text" className="w-full p-2 border rounded-xl" value={editFormData.razao_social} onChange={(e) => setEditFormData({ ...editFormData, razao_social: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">CIDADE</label><input type="text" className="w-full p-2 border rounded-xl" value={editFormData.cidade} onChange={(e) => setEditFormData({ ...editFormData, cidade: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">UF</label><input type="text" maxLength={2} className="w-full p-2 border rounded-xl text-center uppercase" value={editFormData.estado} onChange={(e) => setEditFormData({ ...editFormData, estado: e.target.value.toUpperCase() })} /></div>
-              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">OBSERVAÇÕES</label><textarea rows={3} className="w-full p-2 border rounded-xl resize-none" value={editFormData.observacoes} onChange={(e) => setEditFormData({ ...editFormData, observacoes: e.target.value })} /></div>
-              <div className="col-span-2 flex gap-3 mt-4"><button type="submit" className="flex-grow bg-emerald-600 text-white p-3 rounded-xl font-bold">Salvar Alterações</button></div>
+          <div className="bg-white rounded-2xl w-full max-w-xl overflow-hidden shadow-xl p-6">
+            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-slate-800">Editar Cliente</h3><button onClick={() => setIsEditModalOpen(false)} className="text-xl">×</button></div>
+            <form onSubmit={handleEditCustomerSubmit} className="grid grid-cols-2 gap-3">
+              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">RAZÃO SOCIAL</label><input type="text" className="w-full p-2 border rounded-xl text-sm" value={editFormData.razao_social} onChange={(e) => setEditFormData({ ...editFormData, razao_social: e.target.value })} /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">CIDADE</label><input type="text" className="w-full p-2 border rounded-xl text-sm" value={editFormData.cidade} onChange={(e) => setEditFormData({ ...editFormData, cidade: e.target.value })} /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">UF</label><input type="text" maxLength={2} className="w-full p-2 border rounded-xl text-sm uppercase text-center" value={editFormData.estado} onChange={(e) => setEditFormData({ ...editFormData, estado: e.target.value.toUpperCase() })} /></div>
+              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">OBSERVAÇÕES</label><textarea rows={3} className="w-full p-2 border rounded-xl text-sm resize-none" value={editFormData.observacoes} onChange={(e) => setEditFormData({ ...editFormData, observacoes: e.target.value })}></textarea></div>
+              <button type="submit" className="col-span-2 bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-colors">Salvar Alterações</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isRevendaModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl p-6">
+            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-slate-800">Cadastrar Nova Revenda</h3><button onClick={() => setIsRevendaModalOpen(false)} className="text-xl">×</button></div>
+            <form onSubmit={handleRevendaSubmit} className="space-y-3">
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">Nome da Empresa</label><input required type="text" className="w-full p-2 border rounded-xl text-sm" value={revendaFormData.nome} onChange={(e) => setRevendaFormData({ ...revendaFormData, nome: e.target.value })} /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">CNPJ</label><input required type="text" className="w-full p-2 border rounded-xl text-sm" value={revendaFormData.cnpj} onChange={(e) => setRevendaFormData({ ...revendaFormData, cnpj: e.target.value })} /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">E-mail Comercial</label><input required type="email" className="w-full p-2 border rounded-xl text-sm" value={revendaFormData.email} onChange={(e) => setRevendaFormData({ ...revendaFormData, email: e.target.value })} /></div>
+              <button type="submit" className="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-colors">Cadastrar Revenda</button>
             </form>
           </div>
         </div>
