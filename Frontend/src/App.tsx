@@ -334,17 +334,19 @@ function App() {
                   }
                 />
               </div>
-              <div className="md:col-span-2">
+              <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
                   E-mail
                 </label>
                 <input
+                  required
                   type="email"
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500 transition-all"
-                  value={formData.email}
+                  placeholder="financeiro@email.com"
+                  value={formData.email} // Alterado aqui
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
-                  }
+                  } // Alterado aqui
                 />
               </div>
 

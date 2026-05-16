@@ -31,7 +31,7 @@ model Customer {
   id                String   @id @default(uuid())
   razao_social      String
   cnpj_cpf          String   @unique
-  email_financeiro  String
+  email             String
   telefone          String?
   cidade            String?
   estado            String?

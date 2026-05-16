@@ -34,25 +34,26 @@ app.get("/customers", async (req, res) => {
 
 app.post('/customers', async (req, res) => {
   try {
+    // Pegamos 'email' diretamente da requisição
     const { razao_social, cnpj_cpf, email, cidade, estado, telefone } = req.body;
 
-    // 1. Buscamos o primeiro usuário cadastrado no banco para servir de dono do cliente
+    // Buscamos o primeiro usuário cadastrado para vincular
     const primeiroUsuario = await prisma.user.findFirst();
 
     if (!primeiroUsuario) {
-      return res.status(400).json({ error: 'Nenhum usuário/revenda cadastrado no sistema para vincular este cliente.' });
+      return res.status(400).json({ error: 'Nenhum usuário cadastrado no sistema.' });
     }
 
-    // 2. Criamos o cliente passando o id do usuário encontrado
+    // Criamos o cliente com o campo unificado 'email'
     const customer = await prisma.customer.create({
       data: { 
         razao_social, 
         cnpj_cpf, 
-        email, 
+        email, // Salvando no campo correto
         cidade, 
         estado, 
         telefone,
-        userId: primeiroUsuario.id // Vincula automaticamente ao usuário existente
+        userId: primeiroUsuario.id 
       }
     });
     
