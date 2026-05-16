@@ -50,27 +50,27 @@ async function main() {
             },
           });
 
-          // 2. IMPORTAÇÃO INTELIGENTE: Atualiza dados e status mantendo as observações a salvo
+          // 2. IMPORTAÇÃO INTELIGENTE: Atualiza se já existir o CNPJ/CPF, cria se não existir
           await prisma.customer.upsert({
             where: { cnpj_cpf: documento.trim() },
             update: {
               razao_social: nomeCliente.trim(),
               email: emailCliente.trim(),
-              cidade: row["Cidade"] || "",
-              estado: row["Estado"] || "",
-              status_cadastro: statusPlanilha.trim(),
-              // O campo 'observacoes' fica de fora do update para o CSV não apagar o que você digitou na tela!
+              cidade: row['Cidade'] || '',
+              estado: row['Estado'] || '',
+              status_cadastro: statusPlanilha.trim()
+              // Não colocamos "observacoes" aqui para o CSV não apagar o que você digitou na mão
             },
             create: {
               razao_social: nomeCliente.trim(),
               cnpj_cpf: documento.trim(),
               email: emailCliente.trim(),
-              cidade: row["Cidade"] || "",
-              estado: row["Estado"] || "",
+              cidade: row['Cidade'] || '',
+              estado: row['Estado'] || '',
               status_cadastro: statusPlanilha.trim(),
-              observacoes: "", // Nasce vazio se for um cliente inédito
-              user_id: revenda.id,
-            },
+              observacoes: '', // Nasce vazio no banco
+              user_id: revenda.id
+            }
           });
 
           console.log(`✅ Processado com Sucesso: ${nomeCliente}`);

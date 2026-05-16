@@ -9,10 +9,15 @@ import {
   Upload,
   Filter,
   Users,
-  Shield,
-  Phone,
-  UserPlus
+  UserPlus,
+  Lock,
+  Pencil,
+  Trash2,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
+
+import logoImg from "./Logo.png";
 
 interface Customer {
   id: string;
@@ -54,39 +59,34 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(100);
 
-  // ESTADOS DA TELA DE CLIENTES
+  // ESTADOS DE CLIENTES
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [statusFilter, setStatusFilter] = useState("TODOS");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    razao_social: "", cnpj_cpf: "", email: "", cidade: "", estado: "", telefone: "", status_cadastro: "Ativo", observacoes: ""
-  });
-  const [editFormData, setEditFormData] = useState({
-    razao_social: "", cnpj_cpf: "", email: "", cidade: "", estado: "", telefone: "", status_cadastro: "Ativo", observacoes: ""
-  });
+  const [formData, setFormData] = useState({ razao_social: "", cnpj_cpf: "", email: "", cidade: "", estado: "", telefone: "", status_cadastro: "Ativo", observacoes: "" });
+  const [editFormData, setEditFormData] = useState({ razao_social: "", cnpj_cpf: "", email: "", cidade: "", estado: "", telefone: "", status_cadastro: "Ativo", observacoes: "" });
 
-  // ESTADOS DA TELA DE REVENDAS
+  // ESTADOS DE REVENDAS
   const [revendas, setRevendas] = useState<Revenda[]>([]);
   const [revendaStatusFilter, setRevendaStatusFilter] = useState("TODOS");
   const [isRevendaModalOpen, setIsRevendaModalOpen] = useState(false);
-  const [isEditRevendaModalOpen, setIsEditRevendaModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"DADOS" | "EQUIPE">("DADOS");
   const [selectedRevendaId, setSelectedRevendaId] = useState<string | null>(null);
+  const [selectedRevendaNome, setSelectedRevendaNome] = useState("");
   const [subUsers, setSubUsers] = useState<SubUser[]>([]);
 
-  const [revendaFormData, setRevendaFormData] = useState({
-    nome: "", cnpj: "", email: "", telefone: "", cidade: "", estado: "", senha: "mudar123", status: "Ativo"
-  });
-  const [editRevendaFormData, setEditRevendaFormData] = useState({
-    nome: "", cnpj: "", email: "", telefone: "", cidade: "", estado: "", senha: "mudar123", status: "Ativo"
-  });
+  // Modais de Revendas separados
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false); 
+  const [isEditRevendaModalOpen, setIsEditRevendaModalOpen] = useState(false); 
 
-  // Formulário para novo funcionário interno da revenda
-  const [newSubUserFormData, setNewSubUserFormData] = useState({
-    nome: "", email: "", telefone: "", senha: "mudar123"
-  });
+  const [revendaFormData, setRevendaFormData] = useState({ nome: "", cnpj: "", email: "", telefone: "", cidade: "", estado: "", senha: "mudar123", status: "Ativo" });
+  const [editRevendaFormData, setEditRevendaFormData] = useState({ nome: "", cnpj: "", email: "", telefone: "", cidade: "", estado: "", senha: "mudar123", status: "Ativo" });
+
+  // Estado de Integrantes da Equipe
+  const [newSubUserFormData, setNewSubUserFormData] = useState({ nome: "", email: "", telefone: "", senha: "" });
+  const [editingSubUser, setEditingSubUser] = useState<SubUser | null>(null);
+  const [editSubUserFormData, setEditSubUserFormData] = useState({ nome: "", email: "", telefone: "", senha: "", status: "Ativo" });
 
   useEffect(() => {
     fetchCustomers();
@@ -125,7 +125,6 @@ function App() {
     const fData = new FormData();
     fData.append("file", file);
     fData.append("substituir", desejaSubstituir ? "true" : "false");
-
     try {
       alert("Processando CSV de Clientes...");
       const response = await axios.post("http://localhost:3001/customers/import", fData, { headers: { "Content-Type": "multipart/form-data" } });
@@ -210,9 +209,6 @@ function App() {
       senha: revenda.senha || "mudar123",
       status: revenda.status || "Ativo"
     });
-    setSubUsers([]);
-    fetchSubUsers(revenda.id);
-    setActiveTab("DADOS");
     setIsEditRevendaModalOpen(true);
   };
 
@@ -227,18 +223,60 @@ function App() {
     } catch (err) { alert("Erro ao atualizar revenda."); }
   };
 
+  const handleRowRevendaClick = (revenda: Revenda) => {
+    setSelectedRevendaId(revenda.id);
+    setSelectedRevendaNome(revenda.nome);
+    setSubUsers([]);
+    setEditingSubUser(null);
+    fetchSubUsers(revenda.id);
+    setIsTeamModalOpen(true);
+  };
+
+  // HANDLERS INTEGRANTES (SUBUSERS)
   const handleAddSubUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRevendaId) return;
     try {
       await axios.post(`http://localhost:3001/users/revendas/${selectedRevendaId}/subusers`, newSubUserFormData);
-      alert("Funcionário cadastrado!");
-      setNewSubUserFormData({ nome: "", email: "", telefone: "", senha: "mudar123" });
+      alert("Funcionário adicionado com sucesso!");
+      setNewSubUserFormData({ nome: "", email: "", telefone: "", senha: "" });
       fetchSubUsers(selectedRevendaId);
     } catch (err) { alert("Erro ao cadastrar funcionário."); }
   };
 
-  // FILTROS DINÂMICOS
+  const startEditSubUser = (su: SubUser) => {
+    setEditingSubUser(su);
+    setEditSubUserFormData({
+      nome: su.nome,
+      email: su.email,
+      telefone: su.telefone || "",
+      senha: su.senha || "",
+      status: su.status || "Ativo"
+    });
+  };
+
+  const handleEditSubUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRevendaId || !editingSubUser) return;
+    try {
+      await axios.put(`http://localhost:3001/users/revendas/${selectedRevendaId}/subusers/${editingSubUser.id}`, editSubUserFormData);
+      alert("Dados do funcionário atualizados!");
+      setEditingSubUser(null);
+      fetchSubUsers(selectedRevendaId);
+    } catch (err) { alert("Erro ao atualizar funcionário."); }
+  };
+
+  const handleDeleteSubUser = async (subUserId: string) => {
+    if (!selectedRevendaId) return;
+    if (!window.confirm("Tem certeza que deseja remover este funcionário? Ele perderá acesso ao sistema.")) return;
+    try {
+      await axios.delete(`http://localhost:3001/users/revendas/${selectedRevendaId}/subusers/${subUserId}`);
+      alert("Funcionário removido com sucesso!");
+      fetchSubUsers(selectedRevendaId);
+    } catch (err) { alert("Erro ao remover funcionário."); }
+  };
+
+  // FILTROS
   const filteredCustomers = customers.filter((c) => {
     const matchS = c.razao_social.toLowerCase().includes(search.toLowerCase()) || c.cnpj_cpf.includes(search);
     const matchSt = statusFilter === "TODOS" || (c.status_cadastro || "Ativo").trim().toUpperCase() === statusFilter;
@@ -265,10 +303,9 @@ function App() {
       
       {/* SIDEBAR LATERAL */}
       <aside className="w-64 bg-[#0f172a] text-slate-300 flex flex-col border-r border-slate-800 shrink-0">
-        <div className="p-6 border-b border-slate-800 flex items-center gap-2">
-          <Shield className="text-blue-500" size={24} />
-          <span className="font-bold text-white text-lg tracking-wide">DIGITA</span>
-          <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-mono font-bold">MATRIZ</span>
+        <div className="p-5 border-b border-slate-800 flex flex-col items-center gap-2">
+          <img src={logoImg} alt="Pro Ciber" className="h-12 object-contain mb-1" />
+          <span className="text-[10px] bg-blue-500/20 text-blue-400 px-3 py-0.5 rounded-full font-mono font-bold tracking-widest">SISTEMA MATRIZ</span>
         </div>
         <nav className="flex-grow p-4 space-y-1.5">
           <button onClick={() => { setCurrentMenu("CLIENTES"); setSearch(""); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${currentMenu === "CLIENTES" ? "bg-blue-600 text-white shadow-md shadow-blue-600/10" : "hover:bg-slate-800 text-slate-400 hover:text-slate-200"}`}><FileText size={18} /> Gestão de Contratos</button>
@@ -305,6 +342,7 @@ function App() {
             <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-emerald-500"><p className="text-xs font-bold text-gray-500 uppercase mb-2">Faturado Hoje</p><p className="text-3xl font-bold text-slate-800">R$ 12.450</p></div>
           </div>
 
+          {/* TABELAS DE DADOS */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             <div className="p-4 bg-white flex flex-col md:flex-row gap-4 items-center justify-between border-b border-slate-100">
               <div className="relative flex-grow w-full md:w-auto">
@@ -359,12 +397,16 @@ function App() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {loading ? (<tr><td colSpan={5} className="p-6 text-center text-slate-400">Carregando...</td></tr>) : currentDisplayedRevendas.map((revenda) => (
-                      <tr key={revenda.id} className="hover:bg-slate-50">
+                      <tr key={revenda.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => handleRowRevendaClick(revenda)}>
                         <td className="px-6 py-4"><div className="font-bold text-sm">{revenda.nome}</div><div className="text-xs font-mono text-slate-400">{revenda.cnpj}</div></td>
                         <td className="px-6 py-4 text-xs"><MapPin size={12} className="inline mr-1" />{revenda.cidade} - {revenda.estado}</td>
                         <td className="px-6 py-4 text-xs"><div>{revenda.email}</div><div className="text-slate-400 font-mono mt-0.5">{revenda.telefone || "Sem Telefone"}</div></td>
                         <td className="px-6 py-4"><span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">{revenda.status}</span></td>
-                        <td className="px-6 py-4 text-right"><button onClick={() => handleEditRevendaClick(revenda)} className="text-slate-400 hover:text-emerald-600"><Settings size={16} /></button></td>
+                        <td className="px-6 py-4 text-right">
+                          <button onClick={(e) => { e.stopPropagation(); handleEditRevendaClick(revenda); }} className="text-slate-400 hover:text-emerald-600 p-2">
+                            <Settings size={16} />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -375,7 +417,112 @@ function App() {
         </div>
       </main>
 
-      {/* MODAL: CADASTRAR REVENDA */}
+      {/* MODAL DE INTEGRANTES (Abre ao clicar na linha da revenda) */}
+      {isTeamModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
+            <div className="p-6 bg-slate-50 border-b flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Users size={20} className="text-emerald-600" /> Integrantes Cadastrados</h2>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">Revenda: {selectedRevendaNome}</p>
+              </div>
+              <button onClick={() => setIsTeamModalOpen(false)} className="text-2xl font-bold">×</button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-grow space-y-6">
+              {editingSubUser ? (
+                <form onSubmit={handleEditSubUserSubmit} className="bg-amber-50/50 p-4 rounded-xl border border-amber-200 grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                  <div className="md:col-span-5 text-xs font-bold text-amber-700 flex items-center gap-1"><Pencil size={14} /> EDITANDO INTEGRANTE: {editingSubUser.nome}</div>
+                  <div className="md:col-span-1"><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nome</label><input required type="text" className="w-full p-2 border rounded-lg text-xs" value={editSubUserFormData.nome} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, nome: e.target.value })} /></div>
+                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Telefone</label><input type="text" className="w-full p-2 border rounded-lg text-xs" value={editSubUserFormData.telefone} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, telefone: e.target.value })} /></div>
+                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">E-mail</label><input required type="email" className="w-full p-2 border rounded-lg text-xs" value={editSubUserFormData.email} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, email: e.target.value })} /></div>
+                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Senha</label><input required type="text" className="w-full p-2 border rounded-lg text-xs font-mono" value={editSubUserFormData.senha} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, senha: e.target.value })} /></div>
+                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status</label><select className="w-full p-2 border rounded-lg text-xs" value={editSubUserFormData.status} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, status: e.target.value })}><option value="Ativo">Ativo</option><option value="Inativo">Inativo</option></select></div>
+                  <div className="md:col-span-5 flex gap-2 justify-end mt-1">
+                    <button type="submit" className="bg-amber-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Salvar Alterações</button>
+                    <button type="button" onClick={() => setEditingSubUser(null)} className="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs">Cancelar</button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleAddSubUserSubmit} className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                  <div className="md:col-span-4 text-xs font-bold text-slate-600 flex items-center gap-1"><UserPlus size={14} /> NOVO INTEGRANTE</div>
+                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nome Completo</label><input required type="text" placeholder="Ex: João Técnico" className="w-full p-2 border rounded-lg text-xs" value={newSubUserFormData.nome} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, nome: e.target.value })} /></div>
+                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Telefone</label><input type="text" placeholder="(45) 9999-9999" className="w-full p-2 border rounded-lg text-xs" value={newSubUserFormData.telefone} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, telefone: e.target.value })} /></div>
+                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">E-mail</label><input required type="email" placeholder="joao@email.com" className="w-full p-2 border rounded-lg text-xs" value={newSubUserFormData.email} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, email: e.target.value })} /></div>
+                  <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1"><Lock size={10} /> Senha</label><input required type="text" placeholder="Senha" className="w-full p-2 border rounded-lg text-xs font-mono" value={newSubUserFormData.senha} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, senha: e.target.value })} /></div>
+                  <div className="md:col-span-4"><button type="submit" className="w-full bg-slate-800 text-white py-2 rounded-lg text-xs font-bold">Adicionar Funcionário</button></div>
+                </form>
+              )}
+
+              <div className="border rounded-xl overflow-hidden">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-slate-100 font-bold text-slate-600">
+                    <tr>
+                      <th className="p-3">Nome</th>
+                      <th className="p-3">E-mail</th>
+                      <th className="p-3">Telefone</th>
+                      <th className="p-3">Senha</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3 text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {subUsers.length === 0 ? (<tr><td colSpan={6} className="p-4 text-center text-slate-400">Nenhum funcionário vinculado ainda.</td></tr>) : (
+                      subUsers.map((su) => (
+                        <tr key={su.id} className="hover:bg-slate-50">
+                          <td className="p-3 font-bold text-slate-700">{su.nome}</td>
+                          <td className="p-3 text-slate-600 font-mono">{su.email}</td>
+                          <td className="p-3 text-slate-600">{su.telefone || "Não informado"}</td>
+                          <td className="p-3 text-slate-500 font-mono">{su.senha}</td>
+                          <td className="p-3">
+                            {su.status === "Inativo" ? (
+                              <span className="bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 w-max"><XCircle size={10} /> Inativo</span>
+                            ) : (
+                              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 w-max"><CheckCircle size={10} /> Ativo</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-right flex justify-end gap-1.5">
+                            <button onClick={() => startEditSubUser(su)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-all"><Pencil size={14} /></button>
+                            <button onClick={() => handleDeleteSubUser(su.id)} className="p-1.5 text-slate-400 hover:text-rose-600 transition-all"><Trash2 size={14} /></button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE DADOS CADASTRAIS (Abre ao clicar na engrenagem) */}
+      {isEditRevendaModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-xl">
+            <div className="p-6 bg-slate-50 border-b flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">Dados Cadastrais da Revenda</h2>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">Modo de Edição Geral</p>
+              </div>
+              <button onClick={() => setIsEditRevendaModalOpen(false)} className="text-2xl font-bold">×</button>
+            </div>
+            <form onSubmit={handleEditRevendaSubmit} className="p-6 grid grid-cols-2 gap-4">
+              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">RAZÃO SOCIAL</label><input required type="text" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.nome} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, nome: e.target.value })} /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">CNPJ</label><input type="text" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.cnpj} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, cnpj: e.target.value })} /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">TELEFONE</label><input type="text" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.telefone} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, telefone: e.target.value })} /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">E-MAIL PRINCIPAL</label><input required type="email" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.email} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, email: e.target.value })} /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">SENHA DA REVENDA</label><input type="text" className="w-full p-2 border rounded-xl text-sm font-mono" value={editRevendaFormData.senha} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, senha: e.target.value })} /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">CIDADE</label><input type="text" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.cidade} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, city: e.target.value })} /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1">UF</label><input type="text" maxLength={2} className="w-full p-2 border rounded-xl text-sm text-center uppercase" value={editRevendaFormData.estado} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, estado: e.target.value.toUpperCase() })} /></div>
+              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">SITUAÇÃO DO CONTRATO</label><select className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.status} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, status: e.target.value })}><option value="Ativo">Ativo</option><option value="Cancelado">Cancelado</option><option value="Congelado">Congelado</option></select></div>
+              <div className="col-span-2 flex gap-3 mt-4"><button type="submit" className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">Salvar Dados da Revenda</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* OUTROS MODAIS DA APLICAÇÃO */}
       {isRevendaModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-xl">
@@ -383,92 +530,17 @@ function App() {
             <form onSubmit={handleRevendaSubmit} className="p-6 grid grid-cols-2 gap-4">
               <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Nome / Razão Social</label><input required type="text" className="w-full p-2 border rounded-xl" value={revendaFormData.nome} onChange={(e) => setRevendaFormData({ ...revendaFormData, nome: e.target.value })} /></div>
               <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">CNPJ</label><input type="text" className="w-full p-2 border rounded-xl" value={revendaFormData.cnpj} onChange={(e) => setRevendaFormData({ ...revendaFormData, cnpj: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Telefone Comercial</label><input type="text" placeholder="(45) 99999-9999" className="w-full p-2 border rounded-xl" value={revendaFormData.telefone} onChange={(e) => setRevendaFormData({ ...revendaFormData, telefone: e.target.value })} /></div>
+              <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Telefone Comercial</label><input type="text" className="w-full p-2 border rounded-xl" value={revendaFormData.telefone} onChange={(e) => setRevendaFormData({ ...revendaFormData, telefone: e.target.value })} /></div>
               <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">E-mail de Acesso</label><input required type="email" className="w-full p-2 border rounded-xl" value={revendaFormData.email} onChange={(e) => setRevendaFormData({ ...revendaFormData, email: e.target.value })} /></div>
               <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Senha Inicial</label><input type="text" className="w-full p-2 border rounded-xl" value={revendaFormData.senha} onChange={(e) => setRevendaFormData({ ...revendaFormData, senha: e.target.value })} /></div>
               <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Cidade</label><input type="text" className="w-full p-2 border rounded-xl" value={revendaFormData.cidade} onChange={(e) => setRevendaFormData({ ...revendaFormData, cidade: e.target.value })} /></div>
               <div><label className="block text-xs font-bold text-slate-500 mb-1 uppercase">UF</label><input type="text" maxLength={2} className="w-full p-2 border rounded-xl uppercase text-center" value={revendaFormData.estado} onChange={(e) => setRevendaFormData({ ...revendaFormData, estado: e.target.value.toUpperCase() })} /></div>
-              <div className="col-span-2 flex gap-3 mt-4"><button type="submit" className="flex-grow bg-emerald-600 text-white p-3 rounded-xl font-bold">Salvar Revenda</button><button type="button" onClick={() => setIsRevendaModalOpen(false)} className="px-6 border rounded-xl text-slate-600">Cancelar</button></div>
+              <div className="col-span-2 flex gap-3 mt-4"><button type="submit" className="flex-grow bg-emerald-600 text-white p-3 rounded-xl font-bold">Salvar Revenda</button></div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL: EDITAR REVENDA E GERENCIAR EQUIPE (ABAS) */}
-      {isEditRevendaModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]">
-            <div className="p-6 bg-slate-50 border-b flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">Painel de Controle da Revenda</h2>
-                <p className="text-xs text-slate-500 font-mono mt-0.5">{editRevendaFormData.nome}</p>
-              </div>
-              <button onClick={() => setIsEditRevendaModalOpen(false)} className="text-2xl font-bold">×</button>
-            </div>
-
-            {/* CHAVEADOR DE ABAS */}
-            <div className="flex border-b bg-slate-50/50">
-              <button onClick={() => setActiveTab("DADOS")} className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === "DADOS" ? "border-emerald-600 text-emerald-600 bg-white" : "border-transparent text-slate-500 hover:text-slate-700"}`}>Dados Cadastrais</button>
-              <button onClick={() => setActiveTab("EQUIPE")} className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === "EQUIPE" ? "border-emerald-600 text-emerald-600 bg-white" : "border-transparent text-slate-500 hover:text-slate-700"}`}>Gerenciar Equipe / Usuários ({subUsers.length})</button>
-            </div>
-
-            <div className="p-6 overflow-y-auto flex-grow">
-              {activeTab === "DADOS" ? (
-                <form onSubmit={handleEditRevendaSubmit} className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">RAZÃO SOCIAL</label><input required type="text" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.nome} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, nome: e.target.value })} /></div>
-                  <div><label className="block text-xs font-bold text-slate-500 mb-1">CNPJ</label><input type="text" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.cnpj} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, cnpj: e.target.value })} /></div>
-                  <div><label className="block text-xs font-bold text-slate-500 mb-1">TELEFONE</label><input type="text" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.telefone} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, telefone: e.target.value })} /></div>
-                  <div><label className="block text-xs font-bold text-slate-500 mb-1">E-MAIL PRINCIPAL</label><input required type="email" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.email} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, email: e.target.value })} /></div>
-                  <div><label className="block text-xs font-bold text-slate-500 mb-1">SENHA DA REVENDA</label><input type="text" className="w-full p-2 border rounded-xl text-sm font-mono" value={editRevendaFormData.senha} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, senha: e.target.value })} /></div>
-                  <div><label className="block text-xs font-bold text-slate-500 mb-1">CIDADE</label><input type="text" className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.cidade} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, cidade: e.target.value })} /></div>
-                  <div><label className="block text-xs font-bold text-slate-500 mb-1">UF</label><input type="text" maxLength={2} className="w-full p-2 border rounded-xl text-sm text-center uppercase" value={editRevendaFormData.estado} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, estado: e.target.value.toUpperCase() })} /></div>
-                  <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">SITUAÇÃO DO CONTRATO</label><select className="w-full p-2 border rounded-xl text-sm" value={editRevendaFormData.status} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, status: e.target.value })}><option value="Ativo">Ativo</option><option value="Cancelado">Cancelado</option><option value="Congelado">Congelado</option></select></div>
-                  <div className="col-span-2 flex gap-3 mt-4"><button type="submit" className="flex-grow bg-emerald-600 text-white py-3 rounded-xl font-bold">Salvar Alterações</button></div>
-                </form>
-              ) : (
-                <div className="space-y-6">
-                  {/* FORMULÁRIO RÁPIDO DE CADASTRO DE COMPONENTES DA EQUIPE */}
-                  <form onSubmit={handleAddSubUserSubmit} className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                    <div className="md:col-span-4 text-xs font-bold text-slate-600 flex items-center gap-1"><UserPlus size={14} /> ADICIONAR INTEGRANTE NA EQUIPE</div>
-                    <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nome</label><input required type="text" placeholder="Ex: João Técnico" className="w-full p-2 border rounded-lg text-xs bg-white" value={newSubUserFormData.nome} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, nome: e.target.value })} /></div>
-                    <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Telefone</label><input type="text" placeholder="(45) 9999-9999" className="w-full p-2 border rounded-lg text-xs bg-white" value={newSubUserFormData.telefone} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, telefone: e.target.value })} /></div>
-                    <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">E-mail</label><input required type="email" placeholder="joao@email.com" className="w-full p-2 border rounded-lg text-xs bg-white" value={newSubUserFormData.email} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, email: e.target.value })} /></div>
-                    <div><button type="submit" className="w-full bg-slate-800 text-white py-2 rounded-lg text-xs font-bold hover:bg-slate-900 transition-all">Inserir Funcionário</button></div>
-                  </form>
-
-                  {/* LISTAGEM DOS FUNCIONÁRIOS DA REVENDA */}
-                  <div className="border rounded-xl overflow-hidden">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead className="bg-slate-100 font-bold text-slate-600">
-                        <tr>
-                          <th className="p-3">Nome do Integrante</th>
-                          <th className="p-3">E-mail de Login</th>
-                          <th className="p-3">Telefone Direto</th>
-                          <th className="p-3">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {subUsers.length === 0 ? (<tr><td colSpan={4} className="p-4 text-center text-slate-400">Nenhum funcionário vinculado a esta revenda ainda.</td></tr>) : (
-                          subUsers.map((su) => (
-                            <tr key={su.id} className="hover:bg-slate-50">
-                              <td className="p-3 font-bold text-slate-700">{su.nome}</td>
-                              <td className="p-3 text-slate-600 font-mono">{su.email}</td>
-                              <td className="p-3 text-slate-600">{su.telefone || "Não cadastrado"}</td>
-                              <td className="p-3"><span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[10px] font-bold">Ativo</span></td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL CLIENTES (INDIVIDUAL E EDIÇÃO) MANTIDOS */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-xl">
