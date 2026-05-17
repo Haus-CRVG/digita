@@ -3,22 +3,20 @@ import axios from "axios";
 import {
   MapPin,
   Search,
-  FileText,
-  Settings,
   Plus,
   Upload,
   Filter,
   Users,
   UserPlus,
-  Lock,
   Pencil,
   Trash2,
-  CheckCircle,
-  XCircle,
-  ChevronDown
+  FileText,
+  Settings,
+  LogOut,
 } from "lucide-react";
 
 import logoImg from "./Logo.png";
+import Login from "./Login"; // Importando a tela de login funcional
 
 interface Customer {
   id: string;
@@ -37,8 +35,8 @@ interface Revenda {
   nome: string;
   cnpj: string;
   telefone?: string;
-  cidade: string;
-  estado: string;
+  cidade?: string;
+  estado?: string;
   email: string;
   status: string;
   senha?: string;
@@ -49,53 +47,92 @@ interface SubUser {
   nome: string;
   email: string;
   telefone: string;
-  senha?: string;
   status: string;
 }
 
+// Interface criada para tipar o usuário logado no sistema
+interface UsuarioLogado {
+  nome: string;
+  revendaNome?: string;
+}
+
+const ESTADOS_BR = [
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+  "EX",
+];
+
 function App() {
-  const [currentMenu, setCurrentMenu] = useState<"CLIENTES" | "REVENDAS">("CLIENTES");
-  const [submenuOpen, setSubmenuOpen] = useState(true); // Controle do submenu lateral
+  // ESTADO DE AUTENTICAÇÃO
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+
+  // Novo estado para guardar as informações de quem está usando o sistema
+  const [usuarioLogado, setUsuarioLogado] = useState<UsuarioLogado | null>(
+    null,
+  );
+
+  // Estados de navegação e filtros
+  const [currentMenu, setCurrentMenu] = useState<"CLIENTES" | "REVENDAS">(
+    "CLIENTES",
+  );
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("Todos");
 
-  // ESTADOS DE CLIENTES
+  // Dados
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [statusFilter, setStatusFilter] = useState("TODOS");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [substituirCSV, setSubstituirCSV] = useState(false);
-
-  const [formData, setFormData] = useState({
-    razao_social: "",
-    cnpj_cpf: "",
-    email: "",
-    cidade: "",
-    estado: "",
-    telefone: "",
-    status_cadastro: "Ativo",
-    observacoes: ""
-  });
-
-  const [editFormData, setEditFormData] = useState({
-    razao_social: "",
-    cnpj_cpf: "",
-    email: "",
-    cidade: "",
-    estado: "",
-    telefone: "",
-    status_cadastro: "Ativo",
-    observacoes: ""
-  });
-
-  // ESTADOS DE REVENDAS
   const [revendas, setRevendas] = useState<Revenda[]>([]);
-  const [isRevendaModalOpen, setIsRevendaModalOpen] = useState(false);
-  const [isUnifiedModalOpen, setIsUnifiedModalOpen] = useState(false); // Modal da Engrenagem unificado
-  const [selectedRevendaId, setSelectedRevendaId] = useState<string | null>(null);
-  const [subUsers, setSubUsers] = useState<SubUser[]>([]);
+  const [subUsersSelected, setSubUsersSelected] = useState<SubUser[]>([]);
+  const [selectedRevenda, setSelectedRevenda] = useState<Revenda | null>(null);
 
+  // Modais
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isRevendaModalOpen, setIsRevendaModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSubUsersModalOpen, setIsSubUsersModalOpen] = useState(false);
+  const [isNewSubUserModalOpen, setIsNewSubUserModalOpen] = useState(false);
+  const [isEditSubUserModalOpen, setIsEditSubUserModalOpen] = useState(false);
+
+  // Autocomplemento Cidades (Para o Cadastro de Revendas)
+  const [listaCidades, setListaCidades] = useState<string[]>([]);
+  const [loadingCidades, setLoadingCidades] = useState(false);
+
+  // Formulários
+  const [customerFormData, setCustomerFormData] = useState({
+    razao_social: "",
+    cnpj_cpf: "",
+    email: "",
+    cidade: "",
+    estado: "",
+    telefone: "",
+    status_cadastro: "PENDENTE",
+  });
   const [revendaFormData, setRevendaFormData] = useState({
     nome: "",
     cnpj: "",
@@ -103,153 +140,136 @@ function App() {
     telefone: "",
     cidade: "",
     estado: "",
-    status: "Ativo",
-    senha: "mudar123"
   });
-
-  const [editRevendaFormData, setEditRevendaFormData] = useState({
+  const [subUserFormData, setSubUserFormData] = useState({
     nome: "",
-    cnpj: "",
     email: "",
     telefone: "",
+    senha: "mudar123",
+  });
+  const [editSubUserFormData, setEditSubUserFormData] = useState({
+    id: "",
+    nome: "",
+    email: "",
+    telefone: "",
+    status: "Ativo",
+  });
+  const [editFormData, setEditFormData] = useState({
+    id: "",
+    razao_social: "",
     cidade: "",
     estado: "",
-    status: "Ativo",
-    senha: "mudar123"
+    observacoes: "",
   });
 
-  // ESTADOS DE INTEGRANTES (SUBUSERS) DENTRO DA ENGRENAGEM
-  const [newSubUserFormData, setNewSubUserFormData] = useState({
-    nome: "",
-    email: "",
-    telefone: "",
-    senha: ""
-  });
-  const [editingSubUser, setEditingSubUser] = useState<SubUser | null>(null);
-  const [editSubUserFormData, setEditSubUserFormData] = useState({
-    nome: "",
-    email: "",
-    telefone: "",
-    senha: "",
-    status: "Ativo"
-  });
-
+  // Busca dados se estiver autenticado
   useEffect(() => {
-    fetchCustomers();
-    fetchRevendas();
-  }, []);
-
-  const fetchCustomers = () => {
-    setLoading(true);
-    axios.get("http://localhost:3001/customers")
-      .then((res) => { setCustomers(res.data); setLoading(false); })
-      .catch(() => setLoading(false));
-  };
-
-  const fetchRevendas = () => {
-    setLoading(true);
-    axios.get("http://localhost:3001/users/revendas")
-      .then((res) => { setRevendas(res.data); setLoading(false); })
-      .catch(() => setLoading(false));
-  };
-
-  const fetchSubUsers = (revendaId: string) => {
-    axios.get(`http://localhost:3001/users/revendas/${revendaId}/subusers`)
-      .then((res) => setSubUsers(res.data))
-      .catch((err) => console.error(err));
-  };
-
-  // AO CLICAR NA ENGRENAGEM (ABRE DADOS CADASTRAIS + USUÁRIOS ABAIXO)
-  const handleOpenGearModal = (revenda: Revenda) => {
-    setSelectedRevendaId(revenda.id);
-    setEditRevendaFormData({
-      nome: revenda.nome,
-      cnpj: revenda.cnpj,
-      email: revenda.email,
-      telefone: revenda.telefone || "",
-      cidade: revenda.cidade,
-      estado: revenda.estado,
-      status: revenda.status,
-      senha: revenda.senha || "mudar123"
-    });
-    setSubUsers([]);
-    setEditingSubUser(null);
-    setNewSubUserFormData({ nome: "", email: "", telefone: "", senha: "" });
-    fetchSubUsers(revenda.id);
-    setIsUnifiedModalOpen(true);
-  };
-
-  // SUBMISSÃO CADASTRO REVENDA (DADOS CADASTRAIS SUPERIOR)
-  const handleEditRevendaSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRevendaId) return;
-    try {
-      await axios.put(`http://localhost:3001/users/revendas/${selectedRevendaId}`, editRevendaFormData);
-      alert("Dados cadastrais da revenda atualizados com sucesso!");
+    if (isAuthenticated) {
+      fetchCustomers();
       fetchRevendas();
-    } catch (err) {
-      alert("Erro ao salvar dados cadastrais.");
+    }
+  }, [isAuthenticated]);
+
+  // Efeito para carregar cidades do IBGE com base no Estado selecionado da Revenda
+  useEffect(() => {
+    if (!revendaFormData.estado || revendaFormData.estado === "EX") {
+      setListaCidades([]);
+      return;
+    }
+    const carregarCidades = async () => {
+      setLoadingCidades(true);
+      try {
+        const response = await axios.get(
+          `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${revendaFormData.estado}/municipios`,
+        );
+        setListaCidades(response.data.map((c: any) => c.nome));
+      } catch (error) {
+        console.error("Erro ao carregar cidades do IBGE:", error);
+      } finally {
+        setLoadingCidades(false);
+      }
+    };
+    carregarCidades();
+  }, [revendaFormData.estado]);
+
+  // FUNÇÕES DE LOGIN / LOGOUT
+  const handleLoginSuccess = (
+    userToken: string,
+    role: string,
+    userObj?: any,
+  ) => {
+    setToken(userToken);
+    setIsAuthenticated(true);
+
+    // Salvando os dados dinâmicos do usuário mapeando o retorno da sua API
+    if (userObj) {
+      setUsuarioLogado({
+        nome: userObj.nome,
+        revendaNome: userObj.user?.nome || userObj.revendaNome || "Matriz",
+      });
+    } else {
+      // Fallback de contingência caso o objeto venha vazio temporariamente
+      setUsuarioLogado({ nome: "Usuário", revendaNome: "Sistema" });
     }
   };
 
-  // SUBMISSÃO NOVO INTEGRANTE (EQUIPE INFERIOR)
-  const handleAddSubUserSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRevendaId) return;
+  const handleLogout = () => {
+    setToken(null);
+    setIsAuthenticated(false);
+    setUsuarioLogado(null);
+    setCustomers([]);
+    setRevendas([]);
+  };
+
+  const fetchCustomers = async () => {
     try {
-      await axios.post(`http://localhost:3001/users/revendas/${selectedRevendaId}/subusers`, newSubUserFormData);
-      alert("Usuário adicionado à equipe com sucesso!");
-      setNewSubUserFormData({ nome: "", email: "", telefone: "", senha: "" });
-      fetchSubUsers(selectedRevendaId);
-    } catch (err) {
-      alert("Erro ao cadastrar usuário para a revenda.");
+      const response = await axios.get("http://localhost:3001/customers");
+      setCustomers(response.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // SUBMISSÃO EDIÇÃO INTEGRANTE
-  const handleEditSubUserSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRevendaId || !editingSubUser) return;
+  const fetchRevendas = async () => {
     try {
-      await axios.put(`http://localhost:3001/users/revendas/${selectedRevendaId}/subusers/${editingSubUser.id}`, editSubUserFormData);
-      alert("Dados do integrante atualizados!");
-      setEditingSubUser(null);
-      fetchSubUsers(selectedRevendaId);
-    } catch (err) {
-      alert("Erro ao atualizar dados do integrante.");
+      const response = await axios.get("http://localhost:3001/users/revendas");
+      setRevendas(response.data);
+    } catch (error) {
+      console.error(error);
     }
   };
 
-  const handleDeleteSubUser = async (subUserId: string) => {
-    if (!selectedRevendaId) return;
-    if (!window.confirm("Deseja realmente remover este usuário da equipe?")) return;
+  const fetchSubUsers = async (revendaId: string) => {
     try {
-      await axios.delete(`http://localhost:3001/users/revendas/${selectedRevendaId}/subusers/${subUserId}`);
-      fetchSubUsers(selectedRevendaId);
-    } catch (err) {
-      alert("Erro ao remover usuário.");
+      const response = await axios.get(
+        `http://localhost:3001/users/revendas/${revendaId}/subusers`,
+      );
+      setSubUsersSelected(response.data);
+    } catch (error) {
+      console.error("Erro ao buscar usuários da revenda:", error);
     }
   };
 
-  // HANDLERS ADICIONAIS ORIGINAIS (CLIENTES E CRIAÇÃO REVENDA)
   const handleCustomerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:3001/customers", formData);
-      setIsModalOpen(false);
-      setFormData({ razao_social: "", cnpj_cpf: "", email: "", cidade: "", estado: "", telefone: "", status_cadastro: "Ativo", observacoes: "" });
+      await axios.post("http://localhost:3001/customers", customerFormData);
+      setIsCustomerModalOpen(false);
+      setCustomerFormData({
+        razao_social: "",
+        cnpj_cpf: "",
+        email: "",
+        cidade: "",
+        estado: "",
+        telefone: "",
+        status_cadastro: "PENDENTE",
+      });
       fetchCustomers();
-    } catch (err) { alert("Erro ao cadastrar cliente."); }
-  };
-
-  const handleEditCustomerSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCustomerId) return;
-    try {
-      await axios.put(`http://localhost:3001/customers/${selectedCustomerId}`, editFormData);
-      setIsEditModalOpen(false);
-      fetchCustomers();
-    } catch (err) { alert("Erro ao atualizar cliente."); }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleRevendaSubmit = async (e: React.FormEvent) => {
@@ -257,319 +277,575 @@ function App() {
     try {
       await axios.post("http://localhost:3001/users/revendas", revendaFormData);
       setIsRevendaModalOpen(false);
-      setRevendaFormData({ nome: "", cnpj: "", email: "", telefone: "", cidade: "", estado: "", status: "Ativo", senha: "mudar123" });
-      fetchRevendas();
-    } catch (err) { alert("Erro ao cadastrar revenda."); }
-  };
-
-  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>, tipo: "CLIENTES" | "REVENDAS") => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    const formDataCSV = new FormData();
-    formDataCSV.append("file", file);
-    if (tipo === "CLIENTES") formDataCSV.append("substituir", substituirCSV ? "true" : "false");
-
-    const endpoint = tipo === "CLIENTES" ? "/customers/import" : "/users/revendas/import";
-    try {
-      const res = await axios.post(`http://localhost:3001${endpoint}`, formDataCSV, {
-        headers: { "Content-Type": "multipart/form-data" }
+      setRevendaFormData({
+        nome: "",
+        cnpj: "",
+        email: "",
+        telefone: "",
+        cidade: "",
+        estado: "",
       });
-      alert(res.data.message || "Importação realizada com sucesso!");
-      tipo === "CLIENTES" ? fetchCustomers() : fetchRevendas();
-    } catch (err) {
-      alert("Erro ao processar arquivo CSV.");
+      fetchRevendas();
+    } catch (error) {
+      console.error(error);
     }
   };
 
-  // FILTROS ORIGINAIS
+  const handleSubUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRevenda) return;
+    try {
+      await axios.post(
+        `http://localhost:3001/users/revendas/${selectedRevenda.id}/subusers`,
+        subUserFormData,
+      );
+      setIsNewSubUserModalOpen(false);
+      setSubUserFormData({
+        nome: "",
+        email: "",
+        telefone: "",
+        senha: "mudar123",
+      });
+      fetchSubUsers(selectedRevenda.id);
+    } catch (error) {
+      console.error("Erro ao cadastrar funcionário:", error);
+    }
+  };
+
+  const openEditSubUserModal = (subUser: SubUser) => {
+    setEditSubUserFormData({
+      id: subUser.id,
+      nome: subUser.nome,
+      email: subUser.email,
+      telefone: subUser.telefone || "",
+      status: subUser.status,
+    });
+    setIsEditSubUserModalOpen(true);
+  };
+
+  const handleEditSubUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRevenda) return;
+    try {
+      await axios.put(
+        `http://localhost:3001/users/revendas/${selectedRevenda.id}/subusers/${editSubUserFormData.id}`,
+        {
+          nome: editSubUserFormData.nome,
+          email: editSubUserFormData.email,
+          telefone: editSubUserFormData.telefone,
+          status: editSubUserFormData.status,
+        },
+      );
+      setIsEditSubUserModalOpen(false);
+      fetchSubUsers(selectedRevenda.id);
+    } catch (error) {
+      console.error("Erro ao atualizar técnico:", error);
+    }
+  };
+
+  const handleDeleteSubUser = async (subUserId: string) => {
+    if (
+      !selectedRevenda ||
+      !window.confirm("Tem certeza que deseja remover este técnico do sistema?")
+    )
+      return;
+    try {
+      await axios.delete(
+        `http://localhost:3001/users/revendas/${selectedRevenda.id}/subusers/${subUserId}`,
+      );
+      fetchSubUsers(selectedRevenda.id);
+    } catch (error) {
+      console.error("Erro ao deletar técnico:", error);
+    }
+  };
+
+  const openEditModal = (customer: Customer) => {
+    setEditFormData({
+      id: customer.id,
+      razao_social: customer.razao_social,
+      cidade: customer.cidade || "",
+      estado: customer.estado || "",
+      observacoes: customer.observacoes || "",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await axios.put(`http://localhost:3001/customers/${editFormData.id}`, {
+        razao_social: editFormData.razao_social,
+        cidade: editFormData.cidade,
+        estado: editFormData.estado,
+        observacoes: editFormData.observacoes,
+      });
+      setIsEditModalOpen(false);
+      fetchCustomers();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleStatusChange = async (id: string, currentStatus: string) => {
+    const nextStatusMap: { [key: string]: string } = {
+      PENDENTE: "EM_PROCESSO",
+      EM_PROCESSO: "FINALIZADO",
+      FINALIZADO: "PENDENTE",
+    };
+    const newStatus = nextStatusMap[currentStatus] || "PENDENTE";
+    try {
+      await axios.put(`http://localhost:3001/customers/${id}`, {
+        status_cadastro: newStatus,
+      });
+      fetchCustomers();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      setLoading(true);
+      await axios.post("http://localhost:3001/customers/import-csv", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      alert("CSV importado com sucesso!");
+      fetchCustomers();
+    } catch (error) {
+      console.error(error);
+      alert("Falha na importação.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openRevendaSubUsers = (revenda: Revenda) => {
+    setSelectedRevenda(revenda);
+    fetchSubUsers(revenda.id);
+    setIsSubUsersModalOpen(true);
+  };
+
+  // SE NÃO ESTIVER AUTENTICADO, MOSTRA A TELA DE LOGIN ISOLADA
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  // FILTROS DA TABELA
   const filteredCustomers = customers.filter((c) => {
-    const matchesSearch = c.razao_social.toLowerCase().includes(search.toLowerCase()) || c.cnpj_cpf.includes(search);
-    const matchesStatus = statusFilter === "TODOS" || c.status_cadastro.toUpperCase() === statusFilter.toUpperCase();
-    return matchesSearch && matchesStatus;
+    const matchesSearch =
+      c.razao_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.cnpj_cpf.includes(searchTerm) ||
+      (c.cidade && c.cidade.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (statusFilter === "Todos") return matchesSearch;
+    return matchesSearch && c.status_cadastro === statusFilter;
   });
 
   const filteredRevendas = revendas.filter((r) => {
-    return r.nome.toLowerCase().includes(search.toLowerCase()) || r.cnpj.includes(search);
+    const matchesSearch =
+      r.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.cnpj.includes(searchTerm) ||
+      (r.cidade && r.cidade.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (statusFilter === "Todos") return matchesSearch;
+    return matchesSearch && r.status === statusFilter;
   });
 
-  return (
-    <div className="flex min-h-screen bg-[#f8fafc] text-[#1e293b]">
-      
-      {/* SIDEBAR LATERAL ORIGINAL RECONSTRUÍDA */}
-      <aside className="w-64 bg-[#0f172a] text-slate-300 flex flex-col border-r border-slate-800 shrink-0">
-        <div className="p-6 border-b border-slate-800 flex flex-col items-center gap-2">
-          {/* ALTERE O TAMANHO DA LOGO AQUI ABAIXO: Deixei h-20, altere conforme desejar */}
-          <img src={logoImg} alt="Pro Ciber" className="h-20 w-auto object-contain mb-1" />
-          <span className="text-[10px] bg-blue-500/20 text-blue-400 px-3 py-0.5 rounded-full font-mono font-bold tracking-widest">SISTEMA MATRIZ</span>
-        </div>
-        
-        <nav className="flex-grow p-4 space-y-1.5">
-          <button onClick={() => setCurrentMenu("CLIENTES")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${currentMenu === "CLIENTES" ? "bg-blue-600 text-white shadow-md" : "hover:bg-slate-800 text-slate-400"}`}><FileText size={18} /> Gestão de Contratos</button>
-          
-          <div>
-            <button onClick={() => { setCurrentMenu("REVENDAS"); setSubmenuOpen(!submenuOpen); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold transition-all ${currentMenu === "REVENDAS" ? "bg-blue-600 text-white shadow-md" : "hover:bg-slate-800 text-slate-400"}`}>
-              <div className="flex items-center gap-3"><Users size={18} /> Cadastro Revendas</div>
-              <ChevronDown size={14} className={`transition-transform ${submenuOpen ? "rotate-180" : ""}`} />
-            </button>
-            
-            {/* SUBMENU INTEGRADO LOGO ABAIXO DA REVENDA */}
-            {submenuOpen && (
-              <div className="pl-9 mt-1 space-y-1">
-                <button onClick={() => { setCurrentMenu("REVENDAS"); setIsRevendaModalOpen(true); }} className="w-full text-left py-2 px-3 rounded-md text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-all flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Cadastrar Nova Revenda
-                </button>
-              </div>
-            )}
-          </div>
-        </nav>
-        <div className="p-4 border-t border-slate-800 text-xs text-slate-500 text-center font-medium">Matriz Pro Ciber v2.0</div>
-      </aside>
+  const totalClientes = customers.length;
+  const pendentes = customers.filter(
+    (c) => c.status_cadastro === "PENDENTE",
+  ).length;
+  const emProcesso = customers.filter(
+    (c) => c.status_cadastro === "EM_PROCESSO",
+  ).length;
+  const finalizados = customers.filter(
+    (c) => c.status_cadastro === "FINALIZADO",
+  ).length;
 
-      {/* PAINEL PRINCIPAL ORIGINAL */}
-      <main className="flex-grow p-8">
-        <div className="w-full px-8 mx-auto">
-          <header className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-2xl font-bold text-[#0f172a]">{currentMenu === "CLIENTES" ? "Gestão de Contratos" : "Cadastro de Revendas Parceiras"}</h1>
-              <p className="text-sm text-slate-500 mt-1">Painel administrativo de controle de carteiras e acessos</p>
+  return (
+    <div className="flex min-h-screen bg-slate-50/50 font-sans">
+      {/* MENU LATERAL */}
+      <div className="w-64 bg-slate-900 text-slate-400 p-4 flex flex-col justify-between border-r border-slate-800 shrink-0">
+        
+        {/* Bloco Superior do Menu (Agrupa tudo do Topo garantindo o alinhamento correto) */}
+        <div className="flex flex-col gap-4">
+          {/* TEXTO ONLINE/ADMIN - Forçado no topo direito do menu */}
+          <div className="flex justify-end w-full px-1">
+            <span className="text-[10px] font-bold text-slate-500 bg-slate-950/50 px-2 py-0.5 rounded-md border border-slate-800/60 tracking-wider uppercase">
+              Online / Admin
+            </span>
+          </div>
+
+          {/* CONTAINER DA LOGO */}
+          <div className="flex items-center gap-3 px-2 py-3 bg-slate-950/40 rounded-xl border border-slate-800/60">
+            <img
+              src={logoImg}
+              alt="Logo"
+              className="h-34 w-auto object-contain"
+            />
+            <div className="flex flex-col"></div>
+          </div>
+
+          {/* BOTÕES DE NAVEGAÇÃO */}
+          <div className="space-y-1">
+            <button
+              onClick={() => {
+                setCurrentMenu("CLIENTES");
+                setSearchTerm("");
+                setStatusFilter("Todos");
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                currentMenu === "CLIENTES"
+                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/10 font-bold"
+                  : "hover:bg-slate-800/50 hover:text-slate-200"
+              }`}
+            >
+              <Users size={18} />
+              Clientes Ativos
+            </button>
+
+            <button
+              onClick={() => {
+                setCurrentMenu("REVENDAS");
+                setSearchTerm("");
+                setStatusFilter("Todos");
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                currentMenu === "REVENDAS"
+                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/10 font-bold"
+                  : "hover:bg-slate-800/50 hover:text-slate-200"
+              }`}
+            >
+              <UserPlus size={18} />
+              Canais & Revendas
+            </button>
+          </div>
+        </div>
+
+        {/* Rodapé do Menu (Olá, Usuário) - Mantido isolado embaixo */}
+        <div className="p-2 bg-slate-950/30 rounded-xl border border-slate-800/40 flex items-center gap-3">
+          <div className="h-8 w-8 rounded-lg bg-emerald-600/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-sm shadow-inner uppercase">
+            {usuarioLogado?.nome ? usuarioLogado.nome.charAt(0) : "U"}
+          </div>
+          <div className="flex flex-col overflow-hidden flex-1">
+            <span className="text-xs font-bold text-slate-200 truncate">
+              Olá, {usuarioLogado?.nome || "Usuário"}
+            </span>
+            <span className="text-[10px] text-slate-500 font-semibold truncate mt-0.5">
+              {usuarioLogado?.revendaNome || "Revenda Não Identificada"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* CONTEÚDO PRINCIPAL */}
+      <div className="flex-1 max-w-7xl mx-auto px-6 py-8 overflow-hidden space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+              Gestão de Contratos & Clientes
+            </h1>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {currentMenu === "CLIENTES"
+                ? "Gerencie os registros unificados enviados pelos seus canais."
+                : "Clique em uma revenda para gerenciar seus técnicos de suporte autorizados."}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold cursor-pointer transition-all shadow-sm">
+              <Upload size={14} className="text-slate-500" />
+              Importar Planilha
+              <input
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+            </label>
+            {currentMenu === "CLIENTES" ? (
+              <button
+                onClick={() => setIsCustomerModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/10"
+              >
+                <Plus size={14} /> Novo Cliente
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsRevendaModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/10"
+              >
+                <Plus size={14} /> Nova Revenda
+              </button>
+            )}
+
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded-xl transition-all duration-200 shadow-sm"
+            >
+              <LogOut size={13} />
+              Sair
+            </button>
+          </div>
+        </div>
+
+        {/* CARDS NUMÉRICOS */}
+        {currentMenu === "CLIENTES" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fadeIn">
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase">
+                  Total Clientes
+                </p>
+                <h3 className="text-xl font-bold text-slate-800 mt-1">
+                  {totalClientes}
+                </h3>
+              </div>
+              <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                <Users size={20} />
+              </div>
             </div>
-            
-            <div className="flex gap-3">
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase">
+                  Pendentes
+                </p>
+                <h3 className="text-xl font-bold text-slate-800 mt-1">
+                  {pendentes}
+                </h3>
+              </div>
+              <div className="p-2 bg-slate-100 rounded-lg text-slate-500">
+                <FileText size={20} />
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase">
+                  Em Processo
+                </p>
+                <h3 className="text-xl font-bold text-slate-800 mt-1">
+                  {emProcesso}
+                </h3>
+              </div>
+              <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
+                <FileText size={20} />
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase">
+                  Finalizados
+                </p>
+                <h3 className="text-xl font-bold text-slate-800 mt-1">
+                  {finalizados}
+                </h3>
+              </div>
+              <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+                <FileText size={20} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* BARRA DE FILTRO E PESQUISA */}
+        <div className="flex flex-col sm:flex-row gap-3 items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+          <div className="relative flex-1 w-full">
+            <Search
+              className="absolute left-3 top-2.5 text-slate-400"
+              size={16}
+            />
+            <input
+              type="text"
+              placeholder={
+                currentMenu === "CLIENTES"
+                  ? "Buscar por nome, CPF/CNPJ ou cidade..."
+                  : "Buscar revenda por nome, CNPJ ou cidade..."
+              }
+              className="w-full bg-slate-50/50 pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Filter size={14} className="text-slate-400 shrink-0" />
+            <select
+              className="w-full sm:w-40 bg-slate-50/50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-600 focus:outline-none"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="Todos">Todos os Status</option>
               {currentMenu === "CLIENTES" ? (
                 <>
-                  <label className="bg-slate-800 text-white px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2 hover:bg-slate-700 shadow-sm text-sm cursor-pointer"><Upload size={16} /> Importar Planilha (CSV)<input type="file" accept=".csv" className="hidden" onChange={(e) => handleCSVImport(e, "CLIENTES")} /></label>
-                  <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 hover:bg-blue-700 shadow-sm text-sm"><Plus size={18} /> Novo Contrato</button>
+                  <option value="PENDENTE">Pendente</option>
+                  <option value="EM_PROCESSO">Em Processo</option>
+                  <option value="FINALIZADO">Finalizado</option>
                 </>
               ) : (
                 <>
-                  <label className="bg-slate-800 text-white px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2 hover:bg-slate-700 shadow-sm text-sm cursor-pointer"><Upload size={16} /> Importar Revendas (CSV)<input type="file" accept=".csv" className="hidden" onChange={(e) => handleCSVImport(e, "REVENDAS")} /></label>
-                  <button onClick={() => setIsRevendaModalOpen(true)} className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 hover:bg-emerald-700 shadow-sm text-sm"><Plus size={18} /> Nova Revenda</button>
+                  <option value="Ativo">Ativo</option>
+                  <option value="Cancelado">Cancelado</option>
+                  <option value="Congelado">Congelado</option>
                 </>
               )}
-            </div>
-          </header>
+            </select>
+          </div>
+        </div>
 
-          {/* ÁREA DE CONTEÚDO E FILTROS */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-white">
-              <div className="relative flex-grow max-w-md">
-                <Search className="absolute left-3 top-3 text-slate-400" size={18} />
-                <input type="text" placeholder={currentMenu === "CLIENTES" ? "Buscar por Razão Social ou CNPJ..." : "Buscar por Nome da Revenda ou CNPJ..."} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" value={search} onChange={(e) => setSearch(e.target.value)} />
-              </div>
-
-              {currentMenu === "CLIENTES" && (
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider"><Filter size={14} /> FILTRAR POR STATUS:</div>
-                  <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
-                    {["TODOS", "ATIVO", "CANCELADO", "PENDENTE"].map((status) => (
-                      <button key={status} onClick={() => setStatusFilter(status)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === status ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>{status}</button>
-                    ))}
-                  </div>
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 select-none ml-2 cursor-pointer"><input type="checkbox" className="rounded text-blue-600 border-slate-300" checked={substituirCSV} onChange={(e) => setSubstituirCSV(e.target.checked)} /> Substituir dados se CNPJ já existir no CSV</label>
-                </div>
-              )}
-            </div>
-
-            {/* TABELAS ORIGINAIS RESTAURADAS */}
+        {/* TABELA DE CLIENTES */}
+        {currentMenu === "CLIENTES" ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="overflow-x-auto">
-              {loading ? (
-                <div className="p-12 text-center text-slate-400 font-medium">Carregando dados com segurança...</div>
-              ) : currentMenu === "CLIENTES" ? (
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      <th className="px-6 py-4">Razão Social / Cliente</th>
-                      <th className="px-6 py-4">CNPJ / CPF</th>
-                      <th className="px-6 py-4">E-mail Principal</th>
-                      <th className="px-6 py-4">Localização</th>
-                      <th className="px-6 py-4">Revenda Vinculada</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4 text-right">Ações</th>
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    <th className="p-4">Razão Social / Cliente</th>
+                    <th className="p-4">CNPJ / CPF</th>
+                    <th className="p-4">Cidade / UF</th>
+                    <th className="p-4">Observações</th>
+                    <th className="p-4 text-center">Status</th>
+                    <th className="p-4 text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs text-slate-600">
+                  {filteredCustomers.map((customer) => (
+                    <tr
+                      key={customer.id}
+                      className="hover:bg-slate-50/30 transition-colors"
+                    >
+                      <td className="p-4 font-semibold text-slate-900 whitespace-nowrap">
+                        {customer.razao_social}
+                      </td>
+                      <td className="p-4 font-mono text-slate-500 whitespace-nowrap">
+                        {customer.cnpj_cpf}
+                      </td>
+                      <td className="p-4 whitespace-nowrap">
+                        {customer.cidade ? (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin size={12} className="text-slate-400" />
+                            {customer.cidade} - {customer.estado}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 italic">
+                            Não informado
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 max-w-xs truncate text-slate-400 font-medium">
+                        {customer.observacoes || (
+                          <span className="text-slate-200">-</span>
+                        )}
+                      </td>
+                      <td className="p-4 text-center whitespace-nowrap">
+                        <button
+                          onClick={() =>
+                            handleStatusChange(
+                              customer.id,
+                              customer.status_cadastro,
+                            )
+                          }
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold transition-all text-[10px] ${customer.status_cadastro === "FINALIZADO" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : customer.status_cadastro === "EM_PROCESSO" ? "bg-amber-50 text-amber-700 border border-amber-100" : "bg-slate-50 text-slate-500 border border-slate-200"}`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${customer.status_cadastro === "FINALIZADO" ? "bg-emerald-500" : customer.status_cadastro === "EM_PROCESSO" ? "bg-amber-500" : "bg-slate-400"}`}
+                          />
+                          {customer.status_cadastro === "FINALIZADO"
+                            ? "Finalizado"
+                            : customer.status_cadastro === "EM_PROCESSO"
+                              ? "Em Processo"
+                              : "Pendente"}
+                        </button>
+                      </td>
+                      <td className="p-4 text-center whitespace-nowrap">
+                        <button
+                          onClick={() => openEditModal(customer)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-sm">
-                    {filteredCustomers.map((customer) => (
-                      <tr key={customer.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-bold text-slate-800">{customer.razao_social}</td>
-                        <td className="px-6 py-4 font-mono text-xs text-slate-600">{customer.cnpj_cpf}</td>
-                        <td className="px-6 py-4 text-slate-600">{customer.email}</td>
-                        <td className="px-6 py-4 text-slate-500 flex items-center gap-1 mt-0.5"><MapPin size={14} className="text-slate-400" /> {customer.cidade ? `${customer.cidade}-${customer.estado}` : "Não informado"}</td>
-                        <td className="px-6 py-4 font-medium text-slate-700">{(customer as any).user?.nome || "PRO CIBER MATRIZ"}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${customer.status_cadastro === "Ativo" ? "bg-emerald-50 text-emerald-600" : customer.status_cadastro === "Cancelado" ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"}`}>{customer.status_cadastro}</span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button onClick={() => { setSelectedCustomerId(customer.id); setEditFormData({ razao_social: customer.razao_social, cnpj_cpf: customer.cnpj_cpf, email: customer.email, cidade: customer.cidade || "", estado: customer.estado || "", telefone: customer.telefone || "", status_cadastro: customer.status_cadastro, observacoes: customer.observacoes || "" }); setIsEditModalOpen(true); }} className="text-slate-400 hover:text-blue-600 p-2"><Pencil size={16} /></button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      <th className="px-6 py-4">Parceiro / Revenda</th>
-                      <th className="px-6 py-4">CNPJ</th>
-                      <th className="px-6 py-4">E-mail Comercial</th>
-                      <th className="px-6 py-4">Telefone</th>
-                      <th className="px-6 py-4">Cidade / UF</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4 text-right">Configurações</th>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          /* TABELA DE REVENDAS */
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    <th className="p-4 pl-6">Revenda / Empresa</th>
+                    <th className="p-4">CNPJ / CPF</th>
+                    <th className="p-4">Localização</th>
+                    <th className="p-4">E-mail Comercial / Contato</th>
+                    <th className="p-4 text-center">Status</th>
+                    <th className="p-4 text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs text-slate-600">
+                  {filteredRevendas.map((rev) => (
+                    <tr
+                      key={rev.id}
+                      onClick={() => openRevendaSubUsers(rev)}
+                      className="hover:bg-slate-50/80 cursor-pointer transition-colors"
+                    >
+                      <td className="p-4 pl-6 font-bold text-slate-900 whitespace-nowrap">
+                        {rev.nome}
+                      </td>
+                      <td className="p-4 font-mono text-slate-600 whitespace-nowrap tracking-wide">
+                        {rev.cnpj}
+                      </td>
+                      <td className="p-4 whitespace-nowrap">
+                        {rev.cidade ? (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin size={12} className="text-slate-400" />
+                            {rev.cidade} - {rev.estado}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 italic">
+                            Não configurada
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-slate-900 font-semibold">
+                            {rev.email}
+                          </span>
+                          <span className="text-slate-400 text-[11px]">
+                            {rev.telefone || "Sem Telefone"}
+                          </span>
+                        </div>
+                      </td>
+                      <td
+                        className="p-4 text-center whitespace-nowrap"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${rev.status === "Ativo" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : rev.status === "Congelado" ? "bg-amber-50 text-amber-700 border border-amber-100" : "bg-slate-100 text-slate-600"}`}
+                        >
+                          {rev.status}
+                        </span>
+                      </td>
+                      <td
+                        className="p-4 text-center whitespace-nowrap"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+                          <Settings size={14} />
+                        </button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-sm">
-                    {filteredRevendas.map((revenda) => (
-                      <tr key={revenda.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-bold text-slate-800">{revenda.nome}</td>
-                        <td className="px-6 py-4 font-mono text-xs text-slate-600">{revenda.cnpj}</td>
-                        <td className="px-6 py-4 text-slate-600">{revenda.email}</td>
-                        <td className="px-6 py-4 text-slate-500">{revenda.telefone || "(45) 99999-9999"}</td>
-                        <td className="px-6 py-4 text-slate-500">{revenda.cidade}-{revenda.estado}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${revenda.status === "Ativo" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>{revenda.status}</span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button onClick={() => handleOpenGearModal(revenda)} className="text-slate-400 hover:text-blue-600 p-2 bg-slate-100 rounded-lg hover:bg-blue-50 transition-colors"><Settings size={16} /></button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-      </main>
-
-      {/* MODAL DA ENGRENAGEM UNIFICADO (DADOS CADASTRAIS + INTEGRANTES DA EQUIPE) */}
-      {isUnifiedModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
-            <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">Gerenciamento Completo da Revenda</h2>
-                <p className="text-xs text-slate-400 font-medium mt-0.5">Modifique as informações cadastrais centrais e gerencie as contas dos usuários técnicos</p>
-              </div>
-              <button onClick={() => setIsUnifiedModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-2xl font-semibold px-2">×</button>
-            </div>
-
-            <div className="p-6 overflow-y-auto flex-grow space-y-8">
-              
-              {/* BLOCO SUPERIOR: FORMULÁRIO DE DADOS CADASTRAIS DA REVENDA */}
-              <form onSubmit={handleEditRevendaSubmit} className="bg-slate-50/60 p-5 rounded-2xl border border-slate-200/80 grid grid-cols-3 gap-4">
-                <div className="col-span-3 text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">1. Dados Cadastrais da Empresa</div>
-                <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">RAZÃO SOCIAL</label><input required type="text" className="w-full p-2.5 border rounded-xl text-sm" value={editRevendaFormData.nome} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, nome: e.target.value })} /></div>
-                <div><label className="block text-xs font-bold text-slate-500 mb-1">CNPJ</label><input required type="text" className="w-full p-2.5 border rounded-xl text-sm font-mono" value={editRevendaFormData.cnpj} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, cnpj: e.target.value })} /></div>
-                <div><label className="block text-xs font-bold text-slate-500 mb-1">E-MAIL COMERCIAL</label><input required type="email" className="w-full p-2.5 border rounded-xl text-sm" value={editRevendaFormData.email} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, email: e.target.value })} /></div>
-                <div><label className="block text-xs font-bold text-slate-500 mb-1">TELEFONE</label><input type="text" className="w-full p-2.5 border rounded-xl text-sm" value={editRevendaFormData.telefone} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, telefone: e.target.value })} /></div>
-                <div><label className="block text-xs font-bold text-slate-500 mb-1">STATUS</label><select className="w-full p-2.5 border rounded-xl text-sm font-bold" value={editRevendaFormData.status} onChange={(e) => setEditRevendaFormData({ ...editRevendaFormData, status: e.target.value })}><option value="Ativo">Ativo</option><option value="Cancelado">Cancelado</option></select></div>
-                <div className="col-span-3 flex justify-end pt-2"><button type="submit" className="bg-blue-600 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-blue-700 transition-colors">Salvar Alterações Cadastrais</button></div>
-              </form>
-
-              <hr className="border-slate-200" />
-
-              {/* BLOCO INFERIOR: SUB-USUÁRIOS / INTEGRANTES DA EQUIPE */}
-              <div className="space-y-4">
-                <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider">2. Usuários Técnicos / Integrantes da Equipe</div>
-
-                {/* Alternância Dinâmica entre Formulário de Cadastro e de Edição de Funcionários */}
-                {editingSubUser ? (
-                  <form onSubmit={handleEditSubUserSubmit} className="bg-amber-50/60 p-4 rounded-2xl border border-amber-200 grid grid-cols-4 gap-3 items-end">
-                    <div className="col-span-4 text-xs font-bold text-amber-800">Modificando Usuário Selecionado</div>
-                    <div className="col-span-2"><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nome Técnico</label><input required type="text" className="w-full p-2 border rounded-xl text-xs" value={editSubUserFormData.nome} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, nome: e.target.value })} /></div>
-                    <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">E-mail</label><input required type="email" className="w-full p-2 border rounded-xl text-xs" value={editSubUserFormData.email} onChange={(e) => setEditSubUserFormData({ ...editSubUserFormData, email: e.target.value })} /></div>
-                    <div className="flex gap-2"><button type="submit" className="bg-amber-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex-grow">Salvar</button><button type="button" onClick={() => setEditingSubUser(null)} className="bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs">Cancelar</button></div>
-                  </form>
-                ) : (
-                  <form onSubmit={handleAddSubUserSubmit} className="bg-slate-50 p-4 rounded-2xl border border-slate-200/70 grid grid-cols-4 gap-3 items-end">
-                    <div className="col-span-2"><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nome do Integrante</label><input required type="text" placeholder="Ex: Lucas Suporte" className="w-full p-2.5 bg-white border rounded-xl text-xs" value={newSubUserFormData.nome} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, nome: e.target.value })} /></div>
-                    <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">E-mail de Acesso</label><input required type="email" placeholder="lucas@revenda.com" className="w-full p-2.5 bg-white border rounded-xl text-xs" value={newSubUserFormData.email} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, email: e.target.value })} /></div>
-                    <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1"><Lock size={10} className="inline mr-1 text-slate-400"/>Senha Inicial</label><input required type="text" placeholder="SenhaForte123" className="w-full p-2.5 bg-white border rounded-xl text-xs font-mono" value={newSubUserFormData.senha} onChange={(e) => setNewSubUserFormData({ ...newSubUserFormData, senha: e.target.value })} /></div>
-                    <button type="submit" className="col-span-4 bg-slate-900 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-colors"><UserPlus size={15}/> Cadastrar Integrante e Liberar Acesso</button>
-                  </form>
-                )}
-
-                {/* Tabela de listagem dos Integrantes cadastrados */}
-                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead className="bg-slate-50 font-bold text-slate-500 border-b border-slate-100">
-                      <tr>
-                        <th className="p-3.5 pl-5">Nome do Usuário</th>
-                        <th className="p-3.5">E-mail Técnico</th>
-                        <th className="p-3.5">Status da Conta</th>
-                        <th className="p-3.5 pr-5 text-right">Gerenciar</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {subUsers.length === 0 ? (
-                        <tr><td colSpan={4} className="p-6 text-center text-slate-400 font-medium">Nenhum integrante cadastrado para esta revenda parceira até o momento.</td></tr>
-                      ) : (
-                        subUsers.map((su) => (
-                          <tr key={su.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="p-3.5 pl-5 font-bold text-slate-800">{su.nome}</td>
-                            <td className="p-3.5 text-slate-600 font-mono">{su.email}</td>
-                            <td className="p-3.5"><span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-md font-bold text-[10px]">{su.status}</span></td>
-                            <td className="p-3.5 pr-5 text-right flex justify-end gap-3">
-                              <button onClick={() => { setEditingSubUser(su); setEditSubUserFormData({ nome: su.nome, email: su.email, telefone: su.telefone || "", senha: su.senha || "", status: su.status }); }} className="text-slate-400 hover:text-amber-600 p-1"><Pencil size={15} /></button>
-                              <button onClick={() => handleDeleteSubUser(su.id)} className="text-slate-400 hover:text-rose-600 p-1"><Trash2 size={15} /></button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* OUTROS MODAIS ORIGINAIS MANIPULADOS CORRETAMENTE */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xl overflow-hidden shadow-xl p-6">
-            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-slate-800">Cadastrar Novo Contrato</h3><button onClick={() => setIsModalOpen(false)} className="text-xl">×</button></div>
-            <form onSubmit={handleCustomerSubmit} className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">RAZÃO SOCIAL</label><input required type="text" className="w-full p-2 border rounded-xl text-sm" value={formData.razao_social} onChange={(e) => setFormData({ ...formData, razao_social: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">CNPJ / CPF</label><input required type="text" className="w-full p-2 border rounded-xl text-sm" value={formData.cnpj_cpf} onChange={(e) => setFormData({ ...formData, cnpj_cpf: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">E-MAIL</label><input required type="email" className="w-full p-2 border rounded-xl text-sm" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
-              <button type="submit" className="col-span-2 bg-blue-600 text-white py-2.5 rounded-xl font-bold mt-2 hover:bg-blue-700 transition-colors">Salvar Contrato</button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xl overflow-hidden shadow-xl p-6">
-            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-slate-800">Editar Cliente</h3><button onClick={() => setIsEditModalOpen(false)} className="text-xl">×</button></div>
-            <form onSubmit={handleEditCustomerSubmit} className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">RAZÃO SOCIAL</label><input type="text" className="w-full p-2 border rounded-xl text-sm" value={editFormData.razao_social} onChange={(e) => setEditFormData({ ...editFormData, razao_social: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">CIDADE</label><input type="text" className="w-full p-2 border rounded-xl text-sm" value={editFormData.cidade} onChange={(e) => setEditFormData({ ...editFormData, cidade: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">UF</label><input type="text" maxLength={2} className="w-full p-2 border rounded-xl text-sm uppercase text-center" value={editFormData.estado} onChange={(e) => setEditFormData({ ...editFormData, estado: e.target.value.toUpperCase() })} /></div>
-              <div className="col-span-2"><label className="block text-xs font-bold text-slate-500 mb-1">OBSERVAÇÕES</label><textarea rows={3} className="w-full p-2 border rounded-xl text-sm resize-none" value={editFormData.observacoes} onChange={(e) => setEditFormData({ ...editFormData, observacoes: e.target.value })}></textarea></div>
-              <button type="submit" className="col-span-2 bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-colors">Salvar Alterações</button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {isRevendaModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl p-6">
-            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-slate-800">Cadastrar Nova Revenda</h3><button onClick={() => setIsRevendaModalOpen(false)} className="text-xl">×</button></div>
-            <form onSubmit={handleRevendaSubmit} className="space-y-3">
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">Nome da Empresa</label><input required type="text" className="w-full p-2 border rounded-xl text-sm" value={revendaFormData.nome} onChange={(e) => setRevendaFormData({ ...revendaFormData, nome: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">CNPJ</label><input required type="text" className="w-full p-2 border rounded-xl text-sm" value={revendaFormData.cnpj} onChange={(e) => setRevendaFormData({ ...revendaFormData, cnpj: e.target.value })} /></div>
-              <div><label className="block text-xs font-bold text-slate-500 mb-1">E-mail Comercial</label><input required type="email" className="w-full p-2 border rounded-xl text-sm" value={revendaFormData.email} onChange={(e) => setRevendaFormData({ ...revendaFormData, email: e.target.value })} /></div>
-              <button type="submit" className="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-colors">Cadastrar Revenda</button>
-            </form>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

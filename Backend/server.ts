@@ -48,7 +48,7 @@ app.post("/customers", async (req, res) => {
     } = req.body;
 
     let usuarioVinculo = await prisma.user.findFirst({
-      where: { email: "haus@prociber.com.br" }
+      where: { email: "haus@prociber.com.br" },
     });
 
     if (!usuarioVinculo) {
@@ -57,8 +57,8 @@ app.post("/customers", async (req, res) => {
           nome: "PRO CIBER MATRIZ",
           email: "haus@prociber.com.br",
           senha: "mudar123",
-          role: "REVENDA"
-        }
+          role: "REVENDA",
+        },
       });
     }
 
@@ -79,7 +79,9 @@ app.post("/customers", async (req, res) => {
     res.status(201).json(newCustomer);
   } catch (error: any) {
     console.error(error);
-    res.status(500).json({ error: "Erro ao criar cliente", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao criar cliente", details: error.message });
   }
 });
 
@@ -114,7 +116,9 @@ app.put("/customers/:id", async (req, res) => {
 
     res.json(updatedCustomer);
   } catch (error: any) {
-    res.status(500).json({ error: "Erro ao atualizar cliente", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao atualizar cliente", details: error.message });
   }
 });
 
@@ -133,7 +137,7 @@ app.post("/customers/import", upload.single("file"), async (req, res) => {
       .pipe(
         csv({
           mapHeaders: ({ header }) => header.trim().replace(/^\uFEFF/, ""),
-        })
+        }),
       )
       .on("data", (data) => results.push(data))
       .on("end", async () => {
@@ -150,7 +154,8 @@ app.post("/customers/import", upload.single("file"), async (req, res) => {
             continue;
           }
 
-          const emailCliente = row["E-mail"] || row["email"] || "comercial@prociber.com.br";
+          const emailCliente =
+            row["E-mail"] || row["email"] || "comercial@prociber.com.br";
           const revendaNome = row["Revenda"] || "PRO CIBER";
           const emailRevenda = `revenda.${revendaNome.toLowerCase().replace(/[^a-z0-9]/g, "")}@notafiscalpanta.com`;
 
@@ -211,10 +216,11 @@ app.post("/customers/import", upload.single("file"), async (req, res) => {
       });
   } catch (error: any) {
     console.error("Erro na importação:", error);
-    res.status(500).json({ error: "Erro interno ao importar CSV.", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Erro interno ao importar CSV.", details: error.message });
   }
 });
-
 
 // ==========================================
 // ROTAS DE REVENDAS (USERS com role REVENDA)
@@ -225,18 +231,18 @@ app.get("/users/revendas", async (req, res) => {
   try {
     const revendas = await prisma.user.findMany({
       where: { role: "REVENDA" },
-      orderBy: { nome: "asc" }
+      orderBy: { nome: "asc" },
     });
     const mapped = revendas.map((r: any) => ({
       id: r.id,
       nome: r.nome,
-      cnpj: r.cnpj || "00.000.000/0001-00", 
+      cnpj: r.cnpj || "00.000.000/0001-00",
       email: r.email,
       telefone: r.telefone || "",
       cidade: r.cidade || "Cascavel",
       estado: r.estado || "PR",
       status: r.status || "Ativo",
-      senha: r.senha
+      senha: r.senha,
     }));
     res.json(mapped);
   } catch (error) {
@@ -247,7 +253,8 @@ app.get("/users/revendas", async (req, res) => {
 // Criar nova revenda manualmente
 app.post("/users/revendas", async (req, res) => {
   try {
-    const { nome, cnpj, email, telefone, cidade, estado, senha, status } = req.body;
+    const { nome, cnpj, email, telefone, cidade, estado, senha, status } =
+      req.body;
     const newRevenda = await prisma.user.create({
       data: {
         nome,
@@ -258,12 +265,14 @@ app.post("/users/revendas", async (req, res) => {
         ...(telefone && { telefone }),
         ...(cidade && { cidade }),
         ...(estado && { estado }),
-        ...(status && { status })
-      } as any
+        ...(status && { status }),
+      } as any,
     });
     res.status(201).json(newRevenda);
   } catch (error: any) {
-    res.status(500).json({ error: "Erro ao criar revenda", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao criar revenda", details: error.message });
   }
 });
 
@@ -271,7 +280,8 @@ app.post("/users/revendas", async (req, res) => {
 app.put("/users/revendas/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome, cnpj, email, telefone, cidade, estado, senha, status } = req.body;
+    const { nome, cnpj, email, telefone, cidade, estado, senha, status } =
+      req.body;
     const updated = await prisma.user.update({
       where: { id },
       data: {
@@ -282,8 +292,8 @@ app.put("/users/revendas/:id", async (req, res) => {
         ...(telefone && { telefone }),
         ...(cidade && { cidade }),
         ...(estado && { estado }),
-        ...(status && { status })
-      } as any
+        ...(status && { status }),
+      } as any,
     });
     res.json(updated);
   } catch (error: any) {
@@ -294,12 +304,17 @@ app.put("/users/revendas/:id", async (req, res) => {
 // Importar CSV de Revendas
 app.post("/users/revendas/import", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "Nenhum arquivo enviado." });
+    if (!req.file)
+      return res.status(400).json({ error: "Nenhum arquivo enviado." });
     const results: any[] = [];
     const stream = Readable.from(req.file.buffer.toString("utf-8"));
 
     stream
-      .pipe(csv({ mapHeaders: ({ header }) => header.trim().replace(/^\uFEFF/, "") }))
+      .pipe(
+        csv({
+          mapHeaders: ({ header }) => header.trim().replace(/^\uFEFF/, ""),
+        }),
+      )
       .on("data", (data) => results.push(data))
       .on("end", async () => {
         let inseridos = 0;
@@ -308,7 +323,10 @@ app.post("/users/revendas/import", upload.single("file"), async (req, res) => {
         for (const row of results) {
           const nomeRevenda = row["Revenda"] || row["revenda"];
           const emailRevenda = row["E-mail"] || row["email"];
-          if (!nomeRevenda || !emailRevenda) { ignorados++; continue; }
+          if (!nomeRevenda || !emailRevenda) {
+            ignorados++;
+            continue;
+          }
 
           await prisma.user.upsert({
             where: { email: emailRevenda.trim() },
@@ -321,8 +339,8 @@ app.post("/users/revendas/import", upload.single("file"), async (req, res) => {
               cnpj: row["CPF/CNPJ"] || "",
               cidade: row["Cidade"] || "",
               estado: row["Estado"] || "",
-              status: row["Status"] || "Ativo"
-            } as any
+              status: row["Status"] || "Ativo",
+            } as any,
           });
           inseridos++;
         }
@@ -333,7 +351,6 @@ app.post("/users/revendas/import", upload.single("file"), async (req, res) => {
   }
 });
 
-
 // ==========================================
 // ROTAS DE GERENCIAMENTO DE INTEGRANTES CORRIGIDAS (BUG 1 RESOLVIDO)
 // ==========================================
@@ -342,13 +359,13 @@ app.post("/users/revendas/import", upload.single("file"), async (req, res) => {
 app.get("/users/revendas/:revendaId/subusers", async (req, res) => {
   try {
     const { revendaId } = req.params;
-    
+
     // Busca na tabela User onde o role guarda o vínculo da revenda mãe
     const subUsers = await prisma.user.findMany({
       where: {
-        role: `INTEGRANTE_${revendaId}`
+        role: `INTEGRANTE_${revendaId}`,
       },
-      orderBy: { nome: "asc" }
+      orderBy: { nome: "asc" },
     });
 
     // Mapeia para o formato que seu frontend original espera
@@ -358,7 +375,7 @@ app.get("/users/revendas/:revendaId/subusers", async (req, res) => {
       email: su.email,
       telefone: su.telefone || "",
       senha: su.senha,
-      status: su.status || "Ativo"
+      status: su.status || "Ativo",
     }));
 
     res.json(mapped);
@@ -380,8 +397,8 @@ app.post("/users/revendas/:revendaId/subusers", async (req, res) => {
         senha,
         role: `INTEGRANTE_${revendaId}`, // Vínculo seguro sem quebrar schema.prisma
         ...(telefone && { telefone }),
-        status: "Ativo"
-      } as any
+        status: "Ativo",
+      } as any,
     });
 
     res.status(201).json({
@@ -390,11 +407,16 @@ app.post("/users/revendas/:revendaId/subusers", async (req, res) => {
       email: newSub.email,
       telefone: (newSub as any).telefone || "",
       senha: newSub.senha,
-      status: (newSub as any).status || "Ativo"
+      status: (newSub as any).status || "Ativo",
     });
   } catch (error: any) {
     console.error("Erro ao criar funcionário:", error);
-    res.status(500).json({ error: "Erro ao criar integrante da equipe.", details: error.message });
+    res
+      .status(500)
+      .json({
+        error: "Erro ao criar integrante da equipe.",
+        details: error.message,
+      });
   }
 });
 
@@ -411,8 +433,8 @@ app.put("/users/revendas/:revendaId/subusers/:subUserId", async (req, res) => {
         email,
         senha,
         ...(telefone && { telefone }),
-        status: status || "Ativo"
-      } as any
+        status: status || "Ativo",
+      } as any,
     });
 
     res.json({
@@ -421,7 +443,7 @@ app.put("/users/revendas/:revendaId/subusers/:subUserId", async (req, res) => {
       email: updatedSubUser.email,
       telefone: (updatedSubUser as any).telefone || "",
       senha: updatedSubUser.senha,
-      status: (updatedSubUser as any).status || "Ativo"
+      status: (updatedSubUser as any).status || "Ativo",
     });
   } catch (error: any) {
     res.status(500).json({ error: "Erro ao atualizar dados do funcionário." });
@@ -429,18 +451,63 @@ app.put("/users/revendas/:revendaId/subusers/:subUserId", async (req, res) => {
 });
 
 // Remover um funcionário da revenda
-app.delete("/users/revendas/:revendaId/subusers/:subUserId", async (req, res) => {
+app.delete(
+  "/users/revendas/:revendaId/subusers/:subUserId",
+  async (req, res) => {
+    try {
+      const { subUserId } = req.params;
+      await prisma.user.delete({
+        where: { id: subUserId },
+      });
+      res.json({ message: "Funcionário removido com sucesso!" });
+    } catch (error: any) {
+      res.status(500).json({ error: "Erro ao remover funcionário." });
+    }
+  },
+);
+
+// ==========================================
+// ROTA PARA VALIDAR SE O CPF/CNPJ EXISTE NO BANCO (Etapa 1 do Login)
+// ==========================================
+app.post("/auth/validate-document", async (req, res) => {
   try {
-    const { subUserId } = req.params;
-    await prisma.user.delete({
-      where: { id: subUserId }
+    const { cnpj_cpf } = req.body;
+
+    if (!cnpj_cpf) {
+      return res.status(400).json({ error: "Documento não informado." });
+    }
+
+    // Procura nas Revendas (User) pelo CNPJ
+    const revenda = await prisma.user.findUnique({
+      where: { cnpj: cnpj_cpf.trim() },
     });
-    res.json({ message: "Funcionário removido com sucesso!" });
-  } catch (error: any) {
-    res.status(500).json({ error: "Erro ao remover funcionário." });
+
+    if (revenda) {
+      return res.json({
+        exists: true,
+        type: "REVENDA",
+        nome: revenda.nome,
+      });
+    }
+
+    // Se não achou na tabela principal de revendas, podemos assumir que pode ser um SubUser (Técnico)?
+    // Como SubUser não tem CNPJ direto (ele herda da revenda), a validação principal é pelo CNPJ da empresa mãe.
+    // Se você usa o e-mail do técnico depois, o CNPJ digitado deve ser o da Revenda onde ele trabalha.
+
+    // Caso seja o e-mail master da Matriz criado no seed (haus@prociber.com.br), vamos permitir passar se digitar um padrão ou o próprio CNPJ da matriz se houver.
+    // Para fins de teste, se digitar o CNPJ da matriz cadastrado ou o documento "00.606.458/0001-99" (da sua planilha), ele vai achar.
+
+    return res
+      .status(404)
+      .json({
+        exists: false,
+        error: "Nenhuma empresa localizada com este CPF/CNPJ.",
+      });
+  } catch (error) {
+    console.error("Erro ao validar documento:", error);
+    res.status(500).json({ error: "Erro interno no servidor." });
   }
 });
-
 
 app.listen(port, async () => {
   console.log(`🚀 Servidor rodando em http://localhost:${port}`);
