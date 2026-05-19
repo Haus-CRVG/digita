@@ -469,9 +469,9 @@ function App() {
       {/* MENU LATERAL */}
       <div className="w-64 bg-slate-900 text-slate-400 p-4 flex flex-col justify-between border-r border-slate-800 shrink-0">
         
-        {/* Bloco Superior do Menu (Agrupa tudo do Topo garantindo o alinhamento correto) */}
+        {/* Bloco Superior do Menu */}
         <div className="flex flex-col gap-4">
-          {/* TEXTO ONLINE/ADMIN - Forçado no topo direito do menu */}
+          {/* TEXTO ONLINE/ADMIN */}
           <div className="flex justify-end w-full px-1">
             <span className="text-[10px] font-bold text-slate-500 bg-slate-950/50 px-2 py-0.5 rounded-md border border-slate-800/60 tracking-wider uppercase">
               Online / Admin
@@ -498,7 +498,7 @@ function App() {
               }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                 currentMenu === "CLIENTES"
-                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/10 font-bold"
+                  ? "bg-blue-600 text-white shadow-lg shadow-emerald-600/10 font-bold"
                   : "hover:bg-slate-800/50 hover:text-slate-200"
               }`}
             >
@@ -514,7 +514,7 @@ function App() {
               }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                 currentMenu === "REVENDAS"
-                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/10 font-bold"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/10 font-bold"
                   : "hover:bg-slate-800/50 hover:text-slate-200"
               }`}
             >
@@ -524,7 +524,7 @@ function App() {
           </div>
         </div>
 
-        {/* Rodapé do Menu (Olá, Usuário) - Mantido isolado embaixo */}
+        {/* Rodapé do Menu (Olá, Usuário) */}
         <div className="p-2 bg-slate-950/30 rounded-xl border border-slate-800/40 flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-emerald-600/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-sm shadow-inner uppercase">
             {usuarioLogado?.nome ? usuarioLogado.nome.charAt(0) : "U"}
