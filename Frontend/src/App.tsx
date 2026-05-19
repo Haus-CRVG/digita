@@ -468,24 +468,30 @@ function App() {
     <div className="flex min-h-screen bg-slate-50/50 font-sans">
       {/* MENU LATERAL */}
       <div className="w-64 bg-slate-900 text-slate-400 p-4 flex flex-col justify-between border-r border-slate-800 shrink-0">
-        
+
         {/* Bloco Superior do Menu */}
         <div className="flex flex-col gap-4">
-          {/* TEXTO ONLINE/ADMIN */}
-          <div className="flex justify-end w-full px-1">
-            <span className="text-[10px] font-bold text-slate-500 bg-slate-950/50 px-2 py-0.5 rounded-md border border-slate-800/60 tracking-wider uppercase">
-              Online / Admin
-            </span>
-          </div>
+         
 
           {/* CONTAINER DA LOGO */}
-          <div className="flex items-center gap-3 px-2 py-3 bg-slate-950/40 rounded-xl border border-slate-800/60">
+          {/* INFORMAÇÕES DO USUÁRIO */}
+          <div className="px-2 pt-2">
+            <p className="text-sm font-bold text-white">
+              Olá, {usuarioLogado?.nome || "Usuário"}
+            </p>
+
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {usuarioLogado?.revendaNome || "Sistema Matriz"}
+            </p>
+          </div>
+
+          {/* LOGO */}
+          <div className="flex justify-center py-6">
             <img
               src={logoImg}
-              alt="Logo"
-              className="h-34 w-auto object-contain"
+              alt="Digita"
+              className="h-10 w-auto object-contain opacity-95"
             />
-            <div className="flex flex-col"></div>
           </div>
 
           {/* BOTÕES DE NAVEGAÇÃO */}
@@ -496,11 +502,10 @@ function App() {
                 setSearchTerm("");
                 setStatusFilter("Todos");
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                currentMenu === "CLIENTES"
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${currentMenu === "CLIENTES"
                   ? "bg-blue-600 text-white shadow-lg shadow-emerald-600/10 font-bold"
                   : "hover:bg-slate-800/50 hover:text-slate-200"
-              }`}
+                }`}
             >
               <Users size={18} />
               Clientes Ativos
@@ -512,32 +517,17 @@ function App() {
                 setSearchTerm("");
                 setStatusFilter("Todos");
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                currentMenu === "REVENDAS"
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${currentMenu === "REVENDAS"
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-600/10 font-bold"
                   : "hover:bg-slate-800/50 hover:text-slate-200"
-              }`}
+                }`}
             >
               <UserPlus size={18} />
               Canais & Revendas
             </button>
           </div>
         </div>
-
-        {/* Rodapé do Menu (Olá, Usuário) */}
-        <div className="p-2 bg-slate-950/30 rounded-xl border border-slate-800/40 flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-emerald-600/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-sm shadow-inner uppercase">
-            {usuarioLogado?.nome ? usuarioLogado.nome.charAt(0) : "U"}
-          </div>
-          <div className="flex flex-col overflow-hidden flex-1">
-            <span className="text-xs font-bold text-slate-200 truncate">
-              Olá, {usuarioLogado?.nome || "Usuário"}
-            </span>
-            <span className="text-[10px] text-slate-500 font-semibold truncate mt-0.5">
-              {usuarioLogado?.revendaNome || "Revenda Não Identificada"}
-            </span>
-          </div>
-        </div>
+        
       </div>
 
       {/* CONTEÚDO PRINCIPAL */}
@@ -567,14 +557,14 @@ function App() {
             {currentMenu === "CLIENTES" ? (
               <button
                 onClick={() => setIsCustomerModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/10"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/10"
               >
                 <Plus size={14} /> Novo Cliente
               </button>
             ) : (
               <button
                 onClick={() => setIsRevendaModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/10"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/10"
               >
                 <Plus size={14} /> Nova Revenda
               </button>
