@@ -184,6 +184,7 @@ app.post("/customers/import", upload.single("file"), async (req, res) => {
                   cidade: row["Cidade"] || "",
                   estado: row["Estado"] || "",
                   status_cadastro: (row["Status"] || "Ativo").trim(),
+                  user_id: revenda.id,
                 },
               });
               atualizados++;
