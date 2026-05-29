@@ -93,7 +93,7 @@ app.post("/login", async (req, res) => {
 // ROTAS DE CLIENTES (CUSTOMERS)
 // ==========================================
 
-// Criar um cliente individualmente (Ajustado para vincular à revenda correta)
+// Criar um cliente individualmente
 app.post("/customers", async (req, res) => {
   try {
     const {
@@ -105,12 +105,11 @@ app.post("/customers", async (req, res) => {
       telefone,
       status_cadastro,
       observacoes,
-      revendaId // Recebe do frontend quem está criando para herdar o vínculo
+      revendaId
     } = req.body;
 
     let targetUserId = revendaId;
 
-    // Se por acaso não vier o ID da revenda, busca a matriz Prociber como fallback
     if (!targetUserId) {
       const fallbackUser = await prisma.user.findFirst({
         where: { email: "haus@prociber.com.br" },
@@ -280,25 +279,31 @@ app.post("/customers/import", upload.single("file"), async (req, res) => {
 // ROTAS DE REVENDAS (USERS com role REVENDA)
 // ==========================================
 
-// Criar nova revenda manualmente
+// Criar nova revenda manualmente - CORRIGIDO (Removido o 'city' que quebrava)
 app.post("/users/revendas", async (req, res) => {
   try {
     const { nome, cnpj, email, telefone, cidade, estado, senha, status } = req.body;
+
+    if (!nome || !email) {
+      return res.status(400).json({ error: "Nome e E-mail são obrigatórios para a revenda." });
+    }
+
     const newRevenda = await prisma.user.create({
       data: {
         nome,
-        email,
+        email: email.trim(),
         senha: senha || "mudar123",
         role: "REVENDA",
-        ...(cnpj && { cnpj }),
-        ...(telefone && { telefone }),
-        ...(cidade && { cidade }),
-        ...(estado && { estado }),
-        ...(status && { status }),
-      } as any,
+        cnpj: cnpj ? cnpj.trim() : null,
+        telefone: telefone || null,
+        cidade: cidade || null, // <-- Corrigido aqui!
+        estado: estado || null,
+        status: status || "Ativo",
+      },
     });
     res.status(201).json(newRevenda);
   } catch (error: any) {
+    console.error("Erro ao criar revenda no banco:", error);
     res.status(500).json({ error: "Erro ao criar revenda", details: error.message });
   }
 });
@@ -308,21 +313,23 @@ app.put("/users/revendas/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { nome, cnpj, email, telefone, cidade, estado, senha, status } = req.body;
+    
     const updated = await prisma.user.update({
       where: { id },
       data: {
         nome,
-        email,
-        senha,
-        ...(cnpj && { cnpj }),
-        ...(telefone && { telefone }),
-        ...(cidade && { cidade }),
-        ...(estado && { estado }),
-        ...(status && { status }),
-      } as any,
+        email: email ? email.trim() : undefined,
+        senha: senha || undefined,
+        cnpj: cnpj ? cnpj.trim() : null,
+        telefone: telefone || null,
+        cidade: cidade || null,
+        estado: estado || null,
+        status: status || undefined,
+      },
     });
     res.json(updated);
   } catch (error: any) {
+    console.error("Erro ao atualizar revenda:", error);
     res.status(500).json({ error: "Erro ao atualizar revenda" });
   }
 });
@@ -361,11 +368,11 @@ app.post("/users/revendas/import", upload.single("file"), async (req, res) => {
               email: emailRevenda.trim(),
               senha: "mudar123",
               role: "REVENDA",
-              cnpj: row["CPF/CNPJ"] || "",
-              cidade: row["Cidade"] || "",
-              estado: row["Estado"] || "",
+              cnpj: row["CPF/CNPJ"] || null,
+              cidade: row["Cidade"] || null,
+              estado: row["Estado"] || null,
               status: row["Status"] || "Ativo",
-            } as any,
+            },
           });
           inseridos++;
         }
@@ -377,36 +384,33 @@ app.post("/users/revendas/import", upload.single("file"), async (req, res) => {
 });
 
 // ==========================================
-// ROTAS DE GERENCIAMENTO DE INTEGRANTES
+// ROTAS DE GERENCIAMENTO DE INTEGRANTES (CORRIGIDAS PARA SUBUSER)
 // ==========================================
 
-// Adicionar integrante à tabela User com tag de vínculo
+// Adicionar integrante à tabela SubUser mapeada no Prisma
 app.post("/users/revendas/:revendaId/subusers", async (req, res) => {
   try {
     const { revendaId } = req.params;
     const { nome, email, telefone, senha } = req.body;
 
-    const newSub = await prisma.user.create({
+    if (!nome || !email || !senha) {
+      return res.status(400).json({ error: "Nome, e-mail e senha são obrigatórios." });
+    }
+
+    const newSub = await prisma.subUser.create({
       data: {
         nome,
-        email,
+        email: email.trim(),
         senha,
-        role: `INTEGRANTE_${revendaId}`,
-        ...(telefone && { telefone }),
+        telefone: telefone || null,
         status: "Ativo",
-      } as any,
+        user_id: revendaId, // Garante o relacionamento com a Revenda pai
+      },
     });
 
-    res.status(201).json({
-      id: newSub.id,
-      nome: newSub.nome,
-      email: newSub.email,
-      telefone: (newSub as any).telefone || "",
-      senha: newSub.senha,
-      status: (newSub as any).status || "Ativo",
-    });
+    res.status(201).json(newSub);
   } catch (error: any) {
-    console.error("Erro ao criar funcionário:", error);
+    console.error("Erro ao criar funcionário no banco:", error);
     res.status(500).json({
       error: "Erro ao criar integrante da equipe.",
       details: error.message,
@@ -414,45 +418,59 @@ app.post("/users/revendas/:revendaId/subusers", async (req, res) => {
   }
 });
 
-// Atualizar um funcionário da revenda
+// ROTA NOVA: Listar integrantes de uma revenda específica (Resolve o Erro 404 do Front)
+app.get("/users/revendas/:revendaId/subusers", async (req, res) => {
+  try {
+    const { revendaId } = req.params;
+
+    const subUsers = await prisma.subUser.findMany({
+      where: { user_id: revendaId },
+      orderBy: { nome: "asc" }
+    });
+
+    res.json(subUsers);
+  } catch (error: any) {
+    console.error("Erro ao buscar integrantes:", error);
+    res.status(500).json({ error: "Erro ao buscar integrantes da equipe." });
+  }
+});
+
+// Atualizar um funcionário da revenda na tabela SubUser
 app.put("/users/revendas/:revendaId/subusers/:subUserId", async (req, res) => {
   try {
     const { subUserId } = req.params;
     const { nome, email, telefone, senha, status } = req.body;
 
-    const updatedSubUser = await prisma.user.update({
+    const updatedSubUser = await prisma.subUser.update({
       where: { id: subUserId },
       data: {
         nome,
-        email,
-        senha,
-        ...(telefone && { telefone }),
-        status: status || "Ativo",
-      } as any,
+        email: email ? email.trim() : undefined,
+        senha: senha || undefined,
+        telefone: telefone || null,
+        status: status || undefined,
+      },
     });
 
-    res.json({
-      id: updatedSubUser.id,
-      nome: updatedSubUser.nome,
-      email: updatedSubUser.email,
-      telefone: (updatedSubUser as any).telefone || "",
-      senha: updatedSubUser.senha,
-      status: (updatedSubUser as any).status || "Ativo",
-    });
+    res.json(updatedSubUser);
   } catch (error: any) {
+    console.error("Erro ao atualizar funcionário:", error);
     res.status(500).json({ error: "Erro ao atualizar dados do funcionário." });
   }
 });
 
-// Remover um funcionário da revenda
+// Remover um funcionário da revenda na tabela SubUser
 app.delete("/users/revendas/:revendaId/subusers/:subUserId", async (req, res) => {
   try {
     const { subUserId } = req.params;
-    await prisma.user.delete({
+    
+    await prisma.subUser.delete({
       where: { id: subUserId },
     });
+    
     res.json({ message: "Funcionário removido com sucesso!" });
   } catch (error: any) {
+    console.error("Erro ao deletar funcionário:", error);
     res.status(500).json({ error: "Erro ao remover funcionário." });
   }
 });
@@ -549,7 +567,7 @@ app.get("/users/revendas", async (req, res) => {
   }
 });
 
-// Inicialização alterada para dar o poder de "MATRIZ" à Prociber
+// Inicialização e semente do usuário Matriz
 app.listen(port, async () => {
   console.log(`🚀 Servidor rodando em http://localhost:${port}`);
   try {
@@ -563,5 +581,7 @@ app.listen(port, async () => {
         role: "MATRIZ",
       },
     });
-  } catch (e) {}
+  } catch (e) {
+    console.error("Erro ao criar usuário administrador inicial:", e);
+  }
 });

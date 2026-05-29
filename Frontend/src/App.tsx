@@ -263,24 +263,31 @@ function App() {
   };
 
   const handleCustomerSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await axios.post("http://localhost:3001/customers", customerFormData);
-      setIsCustomerModalOpen(false);
-      setCustomerFormData({
-        razao_social: "",
-        cnpj_cpf: "",
-        email: "",
-        cidade: "",
-        estado: "",
-        telefone: "",
-        status_cadastro: "PENDENTE",
-      });
-      fetchCustomers();
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  e.preventDefault();
+  try {
+    // Injeta dinamicamente o revendaId do usuário logado no envio
+    const payload = {
+      ...customerFormData,
+      revendaId: usuarioLogado?.revendaId || ""
+    };
+
+    await axios.post("http://localhost:3001/customers", payload);
+    setIsCustomerModalOpen(false);
+    setCustomerFormData({
+      razao_social: "",
+      cnpj_cpf: "",
+      email: "",
+      cidade: "",
+      estado: "",
+      telefone: "",
+      status_cadastro: "PENDENTE",
+    });
+    fetchCustomers();
+  } catch (error) {
+    console.error("Erro ao criar cliente:", error);
+    alert("Erro ao cadastrar o cliente. Verifique os dados.");
+  }
+};
 
   const handleRevendaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
