@@ -1,818 +1,397 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import {
-  MapPin,
-  Search,
-  Plus,
-  Upload,
-  Filter,
-  Users,
-  UserPlus,
-  Pencil,
-  Settings,
-  LogOut,
-  X,
-  FileText,
-} from "lucide-react";
+import React, { useState, useEffect } from 'react';
 
-import logoImg from "./Logo.png";
-import Login from "./Login"; // Importando a tela de login funcional
-
-interface Customer {
-  id: string;
-  razao_social: string;
-  cnpj_cpf: string;
-  cidade: string;
-  estado: string;
-  telefone: string;
-  email: string;
-  status_cadastro: string;
-  observacoes?: string;
-  user?: {
-    nome: string;
-  };
-}
-
-interface Revenda {
-  id: string;
-  nome: string;
-  cnpj: string;
-  telefone?: string;
-  cidade?: string;
-  estado?: string;
-  email: string;
-  status: string;
-  senha?: string;
-}
-
-interface SubUser {
-  id: string;
-  nome: string;
-  email: string;
-  telefone: string;
-  status: string;
-}
-
-interface UsuarioLogado {
-  id: string;
-  nome: string;
-  role: string;      // "MATRIZ", "REVENDA" ou "TECNICO"
-  revendaId: string; // Guarda o ID da revenda do escopo atual
-  revendaNome?: string;
-}
-
-const ESTADOS_BR = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
-  "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO", "EX"
-];
-
-function App() {
-  // ESTADO DE AUTENTICAÇÃO
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
-  const [usuarioLogado, setUsuarioLogado] = useState<UsuarioLogado | null>(null);
-
-  // Estados de navegação e filtros
-  const [currentMenu, setCurrentMenu] = useState<"CLIENTES" | "REVENDAS">("CLIENTES");
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Todos");
-
-  // Dados
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [revendas, setRevendas] = useState<Revenda[]>([]);
-  const [subUsersSelected, setSubUsersSelected] = useState<SubUser[]>([]);
-  const [selectedRevenda, setSelectedRevenda] = useState<Revenda | null>(null);
-
-  // Modais
-  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
-  const [isRevendaModalOpen, setIsRevendaModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isSubUsersModalOpen, setIsSubUsersModalOpen] = useState(false);
-  const [isNewSubUserModalOpen, setIsNewSubUserModalOpen] = useState(false);
-  const [isEditSubUserModalOpen, setIsEditSubUserModalOpen] = useState(false);
-
-  // NOVO MODAL: Controla a exibição exclusiva da lista de usuários ao clicar na linha
-  const [isViewUsersOnlyModalOpen, setIsViewUsersOnlyModalOpen] = useState(false);
-
-  // Autocomplemento Cidades
-  const [listaCidades, setListaCidades] = useState<string[]>([]);
-  const [loadingCidades, setLoadingCidades] = useState(false);
-
-  // Formulários
-  const [customerFormData, setCustomerFormData] = useState({
-    razao_social: "",
-    cnpj_cpf: "",
-    email: "",
-    cidade: "",
-    estado: "",
-    telefone: "",
-    status_cadastro: "PENDENTE",
-  });
-  const [revendaFormData, setRevendaFormData] = useState({
-    nome: "",
-    cnpj: "",
-    email: "",
-    telefone: "",
-    cidade: "",
-    estado: "",
-  });
-  // Formulário para edição de dados cadastrais da revenda selecionada
-  const [editRevendaFormData, setEditRevendaFormData] = useState({
-    nome: "",
-    cnpj: "",
-    email: "",
-    telefone: "",
-    status: "",
-  });
-  const [subUserFormData, setSubUserFormData] = useState({
-    nome: "",
-    email: "",
-    telefone: "",
-    senha: "mudar123",
-  });
-  const [editSubUserFormData, setEditSubUserFormData] = useState({
-    id: "",
-    nome: "",
-    email: "",
-    telefone: "",
-    status: "Ativo",
-  });
-
-  // FORMULÁRIO DE EDIÇÃO DE CLIENTE EXPANDIDO COM TODOS OS CAMPOS
-  const [editFormData, setEditFormData] = useState({
-    id: "",
-    razao_social: "",
-    cnpj_cpf: "",
-    email: "",
-    telefone: "",
-    cidade: "",
-    estado: "",
-    status_cadastro: "",
-    observacoes: "",
-  });
-
-  // API LISTAGENS (Unificadas e sem duplicações)
-  const fetchCustomers = async () => {
-    if (!usuarioLogado?.role) return;
-    try {
-      const response = await axios.get("http://localhost:3001/customers", {
-        params: {
-          revendaId: usuarioLogado.revendaId || "",
-          role: usuarioLogado.role
-        }
-      });
-      setCustomers(response.data);
-    } catch (error) {
-      console.error("Erro ao buscar clientes:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchRevendas = async () => {
-    if (!usuarioLogado?.role) return;
-    try {
-      const response = await axios.get("http://localhost:3001/users/revendas", {
-        params: {
-          revendaId: usuarioLogado.revendaId || "",
-          role: usuarioLogado.role
-        }
-      });
-      setRevendas(response.data);
-    } catch (error) {
-      console.error("Erro ao buscar revendas:", error);
-    }
-  };
-
-  const fetchSubUsers = async (revendaId: string) => {
-    try {
-      const response = await axios.get(`http://localhost:3001/users/revendas/${revendaId}/subusers`);
-      setSubUsersSelected(response.data);
-    } catch (error) {
-      console.error("Erro ao buscar usuários da revenda:", error);
-    }
-  };
-
-  // Busca dados se estiver autenticado e com escopo carregado
-  useEffect(() => {
-    if (isAuthenticated && usuarioLogado) {
-      fetchCustomers();
-      fetchRevendas();
-    }
-  }, [isAuthenticated, usuarioLogado]);
-
-  // Carregar cidades do IBGE com base no Estado selecionado da Revenda/Cliente
-  const carregarCidadesDoEstado = async (uf: string) => {
-    if (!uf || uf === "EX") {
-      setListaCidades([]);
-      return;
-    }
-    setLoadingCidades(true);
-    try {
-      const response = await axios.get(
-        `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`
-      );
-      setListaCidades(response.data.map((c: any) => c.nome));
-    } catch (error) {
-      console.error("Erro ao carregar cidades do IBGE:", error);
-    } finally {
-      setLoadingCidades(false);
-    }
-  };
-
-  // Observa mudança de estado nos formulários
-  useEffect(() => {
-    carregarCidadesDoEstado(revendaFormData.estado);
-  }, [revendaFormData.estado]);
-
-  useEffect(() => {
-    carregarCidadesDoEstado(customerFormData.estado);
-  }, [customerFormData.estado]);
-
-  useEffect(() => {
-    if (isEditModalOpen && editFormData.estado) {
-      carregarCidadesDoEstado(editFormData.estado);
-    }
-  }, [editFormData.estado, isEditModalOpen]);
-
-
-  // FUNÇÕES DE LOGIN / LOGOUT
-  const handleLoginSuccess = (userToken: string, role: string, userObj?: any) => {
-    setToken(userToken);
-    setIsAuthenticated(true);
-    if (userObj) {
-      setUsuarioLogado({
-        id: userObj.id,
-        nome: userObj.nome,
-        role: role,
-        revendaId: userObj.revendaId,
-        revendaNome: userObj.revendaNome || "Matriz",
-      });
-    } else {
-      setUsuarioLogado({ id: "", nome: "Usuário", role: role, revendaId: "", revendaNome: "Sistema" });
-    }
-  };
-
-  const handleLogout = () => {
-    setToken(null);
-    setIsAuthenticated(false);
-    setUsuarioLogado(null);
-    setCustomers([]);
-    setRevendas([]);
-  };
-
-  const handleCustomerSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  try {
-    // Injeta dinamicamente o revendaId do usuário logado no envio
-    const payload = {
-      ...customerFormData,
-      revendaId: usuarioLogado?.revendaId || ""
-    };
-
-    await axios.post("http://localhost:3001/customers", payload);
-    setIsCustomerModalOpen(false);
-    setCustomerFormData({
-      razao_social: "",
-      cnpj_cpf: "",
-      email: "",
-      cidade: "",
-      estado: "",
-      telefone: "",
-      status_cadastro: "PENDENTE",
-    });
-    fetchCustomers();
-  } catch (error) {
-    console.error("Erro ao criar cliente:", error);
-    alert("Erro ao cadastrar o cliente. Verifique os dados.");
-  }
+// 1. Dicionário Completo de Planos e Valores conforme imagens image_d4a842.png e image_d4a87d.png
+const TABELA_PRECOS: Record<string, { RefMensal: number; Mensal: number; Trimestral: number; Semestral: number; Anual: number }> = {
+    '3GB':   { RefMensal: 69,   Mensal: 69,   Trimestral: 207,   Semestral: 393.30,   Anual: 745.20 },
+    '5GB':   { RefMensal: 89,   Mensal: 89,   Trimestral: 267,   Semestral: 507.30,   Anual: 961.20 },
+    '6GB':   { RefMensal: 99,   Mensal: 99,   Trimestral: 297,   Semestral: 564.30,   Anual: 1069.20 },
+    '7GB':   { RefMensal: 109,  Mensal: 109,  Trimestral: 327,   Semestral: 621.30,   Anual: 1177.20 },
+    '8GB':   { RefMensal: 129,  Mensal: 129,  Trimestral: 387,   Semestral: 735.30,   Anual: 1393.20 },
+    '9GB':   { RefMensal: 139,  Mensal: 139,  Trimestral: 417,   Semestral: 792.30,   Anual: 1501.20 },
+    '10GB':  { RefMensal: 149,  Mensal: 149,  Trimestral: 447,   Semestral: 849.30,   Anual: 1609.20 },
+    '20GB':  { RefMensal: 159,  Mensal: 159,  Trimestral: 477,   Semestral: 906.30,   Anual: 1717.20 },
+    '30GB':  { RefMensal: 169,  Mensal: 169,  Trimestral: 507,   Semestral: 963.30,   Anual: 1825.20 },
+    '40GB':  { RefMensal: 179,  Mensal: 179,  Trimestral: 537,   Semestral: 1020.30,  Anual: 1933.20 },
+    '50GB':  { RefMensal: 189,  Mensal: 189,  Trimestral: 567,   Semestral: 1077.30,  Anual: 2041.20 },
+    '100GB': { RefMensal: 249,  Mensal: 249,  Trimestral: 747,   Semestral: 1419.30,  Anual: 2689.20 },
+    '150GB': { RefMensal: 299,  Mensal: 299,  Trimestral: 897,   Semestral: 1704.30,  Anual: 3229.20 },
+    '200GB': { RefMensal: 379,  Mensal: 379,  Trimestral: 1137,  Semestral: 2160.30,  Anual: 4093.20 },
+    '250GB': { RefMensal: 399,  Mensal: 399,  Trimestral: 1197,  Semestral: 2274.30,  Anual: 4309.20 },
+    '300GB': { RefMensal: 449,  Mensal: 449,  Trimestral: 1347,  Semestral: 2559.30,  Anual: 4849.20 },
+    '350GB': { RefMensal: 479,  Mensal: 479,  Trimestral: 1437,  Semestral: 2730.30,  Anual: 5173.20 },
+    '400GB': { RefMensal: 499,  Mensal: 499,  Trimestral: 1497,  Semestral: 2844.30,  Anual: 5389.20 },
+    '450GB': { RefMensal: 549,  Mensal: 549,  Trimestral: 1647,  Semestral: 3129.30,  Anual: 5929.20 },
+    '500GB': { RefMensal: 599,  Mensal: 599,  Trimestral: 1797,  Semestral: 3414.30,  Anual: 6469.20 },
+    '550GB': { RefMensal: 649,  Mensal: 649,  Trimestral: 1947,  Semestral: 3699.30,  Anual: 7009.20 },
+    '600GB': { RefMensal: 699,  Mensal: 699,  Trimestral: 2097,  Semestral: 3984.30,  Anual: 7549.20 },
+    '650GB': { RefMensal: 749,  Mensal: 749,  Trimestral: 2247,  Semestral: 4269.30,  Anual: 8089.20 },
+    '700GB': { RefMensal: 799,  Mensal: 799,  Trimestral: 2397,  Semestral: 4554.30,  Anual: 8629.20 },
+    '750GB': { RefMensal: 849,  Mensal: 849,  Trimestral: 2547,  Semestral: 4839.30,  Anual: 9169.20 },
+    '800GB': { RefMensal: 899,  Mensal: 899,  Trimestral: 2697,  Semestral: 5124.30,  Anual: 9709.20 },
+    '850GB': { RefMensal: 949,  Mensal: 949,  Trimestral: 2847,  Semestral: 5409.30,  Anual: 10249.20 },
+    '900GB': { RefMensal: 999,  Mensal: 999,  Trimestral: 2997,  Semestral: 5694.30,  Anual: 10789.20 },
+    '950GB': { RefMensal: 1049, Mensal: 1049, Trimestral: 3147,  Semestral: 5979.30,  Anual: 11329.20 },
+    '1000GB':{ RefMensal: 1099, Mensal: 1099, Trimestral: 3297,  Semestral: 6264.30,  Anual: 11869.20 }
 };
 
-  const handleRevendaSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await axios.post("http://localhost:3001/users/revendas", revendaFormData);
-      setIsRevendaModalOpen(false);
-      setRevendaFormData({
-        nome: "",
-        cnpj: "",
-        email: "",
-        telefone: "",
-        cidade: "",
-        estado: "",
-      });
-      fetchRevendas();
-    } catch (error) {
-      console.error(error);
-    }
-  };
+// Mock simples de Estados/Cidades (IBGE)
+const DADOS_IBGE: Record<string, string[]> = {
+    'PR': ['Cascavel', 'Curitiba', 'Foz do Iguaçu', 'Londrina', 'Maringá'],
+    'SP': ['São Paulo', 'Campinas', 'Santos', 'São Bernardo do Campo'],
+    'SC': ['Florianópolis', 'Blumenau', 'Joinville', 'Chapecó'],
+    'RS': ['Porto Alegre', 'Caxias do Sul', 'Passo Fundo', 'Gramado']
+};
 
-  const handleUpdateRevendaSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRevenda) return;
-    try {
-      await axios.put(`http://localhost:3001/users/revendas/${selectedRevenda.id}`, {
-        nome: editRevendaFormData.nome,
-        email: editRevendaFormData.email,
-        telefone: editRevendaFormData.telefone,
-        status: editRevendaFormData.status,
-      });
-      alert("Dados cadastrais da revenda updated com sucesso!");
-      setIsSubUsersModalOpen(false);
-      fetchRevendas();
-    } catch (error) {
-      console.error("Erro ao atualizar dados da revenda:", error);
-      alert("Erro ao atualizar os dados cadastrais da revenda.");
-    }
-  };
+export default function App() {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [currentStep, setCurrentStep] = useState(1);
 
-  const handleSubUserSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRevenda) return;
-    try {
-      await axios.post(
-        `http://localhost:3001/users/revendas/${selectedRevenda.id}/subusers`,
-        subUserFormData
-      );
-      setIsNewSubUserModalOpen(false);
-      setSubUserFormData({ nome: "", email: "", telefone: "", senha: "mudar123" });
-      fetchSubUsers(selectedRevenda.id);
-    } catch (error) {
-      console.error("Erro ao cadastrar funcionário:", error);
-    }
-  };
+    const [formData, setFormData] = useState({
+        // Etapa 1: Cliente
+        razaoSocial: '',
+        cnpj: '',
+        email: '',
+        telefone: '', // Novo campo adicionado!
+        cidade: '',
+        uf: '',
 
-  const openEditSubUserModal = (subUser: SubUser) => {
-    setEditSubUserFormData({
-      id: subUser.id,
-      nome: subUser.nome,
-      email: subUser.email,
-      telefone: subUser.telefone || "",
-      status: subUser.status,
+        // Etapa 2: Implantação e Produto
+        dataImplantacao: '',
+        responsavel: '',
+        plano: '',
+        recorrencia: 'Mensal',
+
+        // Etapa 3: Financeiro & Comissões integrados e editáveis
+        faturado: 'Não',
+        formaAdesao: 'Boleto bancário',
+        formaRecorrencia: 'Boleto bancário',
+        vencimentoAdesao: '2026-06-08',
+        vencimentoRecorrencia: '2026-06-08',
+        parcelasAdesao: 1,
+        parcelasRecorrencia: 1,
+        referenciaMensal: 0,
+        valorAdesao: 199.00, // Custo inicial padrão
+        valorRecorrencia: 0, 
+
+        // Regras de Comissões movidas para a mesma tela financeira
+        comissaoAdesao: 100,
+        comissaoRecorrencia: 15,
+        impostoAdesao: 29.90
     });
-    setIsEditSubUserModalOpen(true);
-  };
 
-  const handleEditSubUserSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRevenda) return;
-    try {
-      await axios.put(
-        `http://localhost:3001/users/revendas/${selectedRevenda.id}/subusers/${editSubUserFormData.id}`,
-        {
-          nome: editSubUserFormData.nome,
-          email: editSubUserFormData.email,
-          telefone: editSubUserFormData.telefone,
-          status: editSubUserFormData.status,
+    // Atualização dinâmica inteligente de valores com base no Plano + Recorrência real
+    useEffect(() => {
+        if (formData.plano && TABELA_PRECOS[formData.plano]) {
+            const dadosPlano = TABELA_PRECOS[formData.plano];
+            const refMensal = dadosPlano.RefMensal;
+            
+            // Pega o valor real de acordo com a chave da recorrência (Mensal, Trimestral, Semestral, Anual)
+            const tipoRecorrencia = formData.recorrencia as 'Mensal' | 'Trimestral' | 'Semestral' | 'Anual';
+            const valorCalculadoPeriodo = dadosPlano[tipoRecorrencia] || refMensal;
+
+            setFormData(prev => ({
+                ...prev,
+                referenciaMensal: refMensal,
+                valorRecorrencia: valorCalculadoPeriodo
+            }));
         }
-      );
-      setIsEditSubUserModalOpen(false);
-      fetchSubUsers(selectedRevenda.id);
-    } catch (error) {
-      console.error("Erro ao atualizar técnico:", error);
-    }
-  };
+    }, [formData.plano, formData.recorrencia]);
 
-  const handleDeleteSubUser = async (subUserId: string) => {
-    if (!selectedRevenda || !window.confirm("Tem certeza que deseja remover este técnico do sistema?")) return;
-    try {
-      await axios.delete(`http://localhost:3001/users/revendas/${selectedRevenda.id}/subusers/${subUserId}`);
-      fetchSubUsers(selectedRevenda.id);
-    } catch (error) {
-      console.error("Erro ao deletar técnico:", error);
-    }
-  };
-
-  const openEditModal = (customer: Customer) => {
-    setEditFormData({
-      id: customer.id,
-      razao_social: customer.razao_social,
-      cnpj_cpf: customer.cnpj_cpf,
-      email: customer.email || "",
-      telefone: customer.telefone || "",
-      cidade: customer.cidade || "",
-      estado: customer.estado || "",
-      status_cadastro: customer.status_cadastro,
-      observacoes: customer.observacoes || "",
-    });
-    setIsEditModalOpen(true);
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await axios.put(`http://localhost:3001/customers/${editFormData.id}`, {
-        razao_social: editFormData.razao_social,
-        cnpj_cpf: editFormData.cnpj_cpf,
-        email: editFormData.email,
-        telefone: editFormData.telefone,
-        cidade: editFormData.cidade,
-        estado: editFormData.estado,
-        status_cadastro: editFormData.status_cadastro,
-        observacoes: editFormData.observacoes,
-      });
-      setIsEditModalOpen(false);
-      fetchCustomers();
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleStatusChange = async (id: string, currentStatus: string) => {
-    const nextStatusMap: { [key: string]: string } = {
-      PENDENTE: "EM_PROCESSO",
-      EM_PROCESSO: "FINALIZADO",
-      FINALIZADO: "PENDENTE",
+    const limparCidadesAoMudarUF = (estadoSelecionado: string) => {
+        setFormData({ ...formData, uf: estadoSelecionado, cidade: '' });
     };
-    const newStatus = nextStatusMap[currentStatus] || "PENDENTE";
-    try {
-      await axios.put(`http://localhost:3001/customers/${id}`, {
-        status_cadastro: newStatus,
-      });
-      fetchCustomers();
-    } catch (error) {
-      console.error(error);
-    }
-  };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      setLoading(true);
-      await axios.post("http://localhost:3001/customers/import-csv", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      alert("CSV importado com sucesso!");
-      fetchCustomers();
-    } catch (error) {
-      console.error(error);
-      alert("Falha na importação.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    return (
+        <div className="flex h-screen bg-slate-50 text-slate-800 font-sans">
+            {/* MENU LATERAL */}
+            <aside className="w-64 bg-white border-r border-slate-200 p-4 space-y-6">
+                <div className="text-xl font-bold border-b border-slate-100 pb-4 text-slate-900">Prociber Painel</div>
+                <nav className="space-y-2">
+                    <button className="w-full text-left p-2 hover:bg-slate-100 rounded text-sm font-medium">Dashboard</button>
+                    <button className="w-full text-left p-2 bg-blue-50 text-blue-600 rounded text-sm font-semibold">Clientes</button>
+                </nav>
+            </aside>
 
-  const handleRowClick = (revenda: Revenda) => {
-    setSelectedRevenda(revenda);
-    fetchSubUsers(revenda.id);
-    setIsViewUsersOnlyModalOpen(true);
-  };
+            {/* CONTEÚDO PRINCIPAL */}
+            <main className="flex-1 p-8 overflow-y-auto">
+                <header className="flex justify-between items-center mb-6">
+                    <h1 className="text-2xl font-bold text-slate-900">Gestão de Contratos</h1>
+                    <button
+                        onClick={() => { setCurrentStep(1); setIsModalOpen(true); }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
+                    >
+                        + Novo Contrato
+                    </button>
+                </header>
 
-  const handleGearClick = (e: React.MouseEvent, revenda: Revenda) => {
-    e.stopPropagation();
-    setSelectedRevenda(revenda);
-    setEditRevendaFormData({
-      nome: revenda.nome,
-      cnpj: revenda.cnpj,
-      email: revenda.email,
-      telefone: revenda.telefone || "",
-      status: revenda.status,
-    });
-    fetchSubUsers(revenda.id);
-    setIsSubUsersModalOpen(true);
-  };
+                {/* MODAL PRINCIPAL */}
+                {isModalOpen && (
+                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                        <div className="bg-white border border-slate-200 rounded-xl max-w-3xl w-full p-6 space-y-6 max-h-[95vh] overflow-y-auto shadow-xl">
 
-  if (!isAuthenticated) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
-  }
+                            {/* Indicador de Etapas Reduzido para 3 Etapas */}
+                            <div className="flex justify-between border-b border-slate-100 pb-4 text-xs font-semibold tracking-wide">
+                                <span className={currentStep === 1 ? "text-blue-600 border-b-2 border-blue-600 pb-4 -mb-[18px]" : "text-slate-400"}>1. CLIENTE</span>
+                                <span className={currentStep === 2 ? "text-blue-600 border-b-2 border-blue-600 pb-4 -mb-[18px]" : "text-slate-400"}>2. PRODUTO</span>
+                                <span className={currentStep === 3 ? "text-blue-600 border-b-2 border-blue-600 pb-4 -mb-[18px]" : "text-slate-400"}>3. FINANCEIRO & COMISSÕES</span>
+                            </div>
 
-  // BUSCAS BLINDADAS CONTRA CAMPOS NULOS (Evita tela em branco)
-  const filteredCustomers = customers.filter((c) => {
-    const razaoSocial = (c.razao_social || "").toLowerCase();
-    const cnpjCpf = (c.cnpj_cpf || "");
-    const cidade = (c.cidade || "").toLowerCase();
-    const termo = searchTerm.toLowerCase();
+                            {/* ETAPA 1: CLIENTE (COM TELEFONE E COMPORTAMENTO IBGE) */}
+                            {currentStep === 1 && (
+                                <div className="space-y-4 pt-2">
+                                    <h3 className="text-base font-bold text-slate-900">Dados Básicos do Cliente</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">Razão Social / Nome *</label>
+                                            <input
+                                                type="text"
+                                                className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                                                value={formData.razaoSocial}
+                                                onChange={e => setFormData({ ...formData, razaoSocial: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">CNPJ / CPF *</label>
+                                            <input
+                                                type="text"
+                                                className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                                                value={formData.cnpj}
+                                                onChange={e => setFormData({ ...formData, cnpj: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">E-mail *</label>
+                                            <input
+                                                type="email"
+                                                className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                                                value={formData.email}
+                                                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">Telefone / Celular *</label>
+                                            <input
+                                                type="text"
+                                                placeholder="(00) 00000-0000"
+                                                className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                                                value={formData.telefone}
+                                                onChange={e => setFormData({ ...formData, telefone: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">Estado (UF) *</label>
+                                            <select
+                                                className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                                                value={formData.uf}
+                                                onChange={e => limparCidadesAoMudarUF(e.target.value)}
+                                            >
+                                                <option value="">Selecione a UF...</option>
+                                                {Object.keys(DADOS_IBGE).map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">Cidade *</label>
+                                            <select
+                                                className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                                                value={formData.cidade}
+                                                disabled={!formData.uf}
+                                                onChange={e => setFormData({ ...formData, cidade: e.target.value })}
+                                            >
+                                                <option value="">Selecione a cidade...</option>
+                                                {formData.uf && DADOS_IBGE[formData.uf].map(cidade => (
+                                                    <option key={cidade} value={cidade}>{cidade}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end pt-4 border-t border-slate-100">
+                                        <button
+                                            onClick={() => setCurrentStep(2)}
+                                            disabled={!formData.razaoSocial || !formData.cnpj || !formData.cidade}
+                                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded text-sm shadow-sm"
+                                        >
+                                            Avançar para Venda →
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-    const matchesSearch =
-      razaoSocial.includes(termo) ||
-      cnpjCpf.includes(termo) ||
-      cidade.includes(termo);
+                            {/* ETAPA 2: PRODUTO (LISTANDO TODOS OS 30 PLANOS DA ARVORE) */}
+                            {currentStep === 2 && (
+                                <div className="space-y-6 pt-2">
+                                    <div>
+                                        <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-1 mb-3">IMPLANTAÇÃO</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Previsão de implantação *</label>
+                                                <input
+                                                    type="date"
+                                                    className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                                                    value={formData.dataImplantacao}
+                                                    onChange={(e) => setFormData({ ...formData, dataImplantacao: e.target.value })}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Responsável pela implantação *</label>
+                                                <input
+                                                    type="text"
+                                                    className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                                                    value={formData.responsavel}
+                                                    onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
 
-    if (statusFilter === "Todos") return matchesSearch;
-    return matchesSearch && c.status_cadastro === statusFilter;
-  });
+                                    <div>
+                                        <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-1 mb-3">PRODUTO: BACKUP DADOS</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Plano (Todos os tamanhos disponíveis) *</label>
+                                                <select
+                                                    className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                                                    value={formData.plano}
+                                                    onChange={e => setFormData({ ...formData, plano: e.target.value })}
+                                                >
+                                                    <option value="">Selecione um plano...</option>
+                                                    {Object.keys(TABELA_PRECOS).map(p => <option key={p} value={p}>{p}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Recorrência *</label>
+                                                <select
+                                                    className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                                                    value={formData.recorrencia}
+                                                    onChange={e => setFormData({ ...formData, recorrencia: e.target.value })}
+                                                >
+                                                    <option value="Mensal">Mensal</option>
+                                                    <option value="Trimestral">Trimestral</option>
+                                                    <option value="Semestral">Semestral</option>
+                                                    <option value="Anual">Anual</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
 
-  const filteredRevendas = revendas.filter((r) => {
-    const nome = (r.nome || "").toLowerCase();
-    const cnpj = (r.cnpj || "");
-    const cidade = (r.cidade || "").toLowerCase();
-    const termo = searchTerm.toLowerCase();
+                                    <div className="flex justify-between pt-4 border-t border-slate-100">
+                                        <button onClick={() => setCurrentStep(1)} className="text-slate-500 hover:text-slate-800 text-sm font-medium">
+                                            ← Voltar
+                                        </button>
+                                        <button
+                                            onClick={() => setCurrentStep(3)}
+                                            disabled={!formData.dataImplantacao || !formData.plano}
+                                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded text-sm shadow-sm"
+                                        >
+                                            Próximo
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-    const matchesSearch =
-      nome.includes(termo) ||
-      cnpj.includes(termo) ||
-      cidade.includes(termo);
+                            {/* ETAPA 3: FINANCEIRO & COMISSÕES INTEGRADOS EM CARD BOXES TOTALMENTE EDITÁVEIS */}
+                            {currentStep === 3 && (
+                                <div className="space-y-6 pt-2">
+                                    
+                                    {/* Bloco de Informações Gerais */}
+                                    <div className="bg-blue-50/70 border border-blue-100 p-3 rounded-lg text-xs text-blue-800 flex justify-between items-center">
+                                        <div><strong>Plano Ativo:</strong> {formData.plano} ({formData.recorrencia})</div>
+                                        <div><strong>Ref. Mensal Base:</strong> R$ {formData.referenciaMensal.toFixed(2)}</div>
+                                    </div>
 
-    if (statusFilter === "Todos") return matchesSearch;
-    return matchesSearch && r.status === statusFilter;
-  });
+                                    {/* BOXES EDITÁVEIS DE CONFIGURAÇÃO DE PAGAMENTO */}
+                                    <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+                                        <h4 className="text-sm font-bold text-slate-900 tracking-wide uppercase border-b pb-2 text-blue-600">Configurações de Faturamento</h4>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Faturado *</label>
+                                                <select className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.faturado} onChange={e => setFormData({...formData, faturado: e.target.value})}>
+                                                    <option value="Sim">Sim</option>
+                                                    <option value="Não">Não</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Forma de Pagamento - Adesão *</label>
+                                                <input type="text" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.formaAdesao} onChange={e => setFormData({...formData, formaAdesao: e.target.value})}/>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Primeiro Vencimento da Adesão</label>
+                                                <input type="date" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.vencimentoAdesao} onChange={e => setFormData({...formData, vencimentoAdesao: e.target.value})}/>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Forma de Pagamento - Recorrência *</label>
+                                                <input type="text" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.formaRecorrencia} onChange={e => setFormData({...formData, formaRecorrencia: e.target.value})}/>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Primeiro Vencimento da Recorrência</label>
+                                                <input type="date" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.vencimentoRecorrencia} onChange={e => setFormData({...formData, vencimentoRecorrencia: e.target.value})}/>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Recorrência do Pagamento *</label>
+                                                <input type="text" className="w-full bg-slate-100 border border-slate-300 rounded p-2 text-sm font-semibold" value={formData.recorrencia} readOnly />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Parcelas de Adesão</label>
+                                                <input type="number" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.parcelasAdesao} onChange={e => setFormData({...formData, parcelasAdesao: Number(e.target.value)})}/>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Parcelas de Recorrência</label>
+                                                <input type="number" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.parcelasRecorrencia} onChange={e => setFormData({...formData, parcelasRecorrencia: Number(e.target.value)})}/>
+                                            </div>
+                                        </div>
 
-  const totalClientes = customers.length;
-  const pendentes = customers.filter((c) => c.status_cadastro === "PENDENTE").length;
-  const emProcesso = customers.filter((c) => c.status_cadastro === "EM_PROCESSO").length;
-  const finalizados = customers.filter((c) => c.status_cadastro === "FINALIZADO").length;
+                                        {/* BOXES EDITÁVEIS DE VALORES (PRODUTOS DE ENTRADA DO BOX) */}
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Referência Mensal (R$)</label>
+                                                <input type="number" className="w-full bg-slate-100 border border-slate-300 rounded p-2 text-sm text-slate-700 font-medium" value={formData.referenciaMensal} readOnly/>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-700 mb-1">Valor de Adesão (R$) *</label>
+                                                <input type="number" step="0.01" className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold focus:ring-1 focus:ring-blue-500" value={formData.valorAdesao} onChange={e => setFormData({...formData, valorAdesao: Number(e.target.value)})}/>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-700 mb-1">Valor de Recorrência (R$) *</label>
+                                                <input type="number" step="0.01" className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold focus:ring-1 focus:ring-blue-500" value={formData.valorRecorrencia} onChange={e => setFormData({...formData, valorRecorrencia: Number(e.target.value)})}/>
+                                            </div>
+                                        </div>
+                                    </div>
 
-  return (
-    <div className="flex min-h-screen bg-slate-50/50 font-sans overflow-hidden">
-      {/* MENU LATERAL */}
-      <div className="w-56 bg-slate-900 text-slate-400 p-4 flex flex-col justify-between border-r border-slate-800 shrink-0 select-none">
-        <div className="flex flex-col gap-4">
-          <div className="px-2 pt-2">
-            <p className="text-sm font-bold text-white truncate">
-              Olá, {usuarioLogado?.nome || "Usuário"}
-            </p>
-            <p className="text-[11px] text-slate-500 mt-0.5 truncate">
-              {usuarioLogado?.revendaNome || "Sistema Matriz"}
-            </p>
-          </div>
+                                    {/* UNIFICAÇÃO DA TELA DE COMISSÕES (INTEGRADA NO MESMO PASSO) */}
+                                    <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+                                        <h4 className="text-sm font-bold text-slate-900 tracking-wide uppercase border-b pb-2 text-amber-600">Regras de Comissão e Imposto</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Revenda - Comissão de Adesão (%) *</label>
+                                                <input type="number" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.comissaoAdesao} onChange={e => setFormData({...formData, comissaoAdesao: Number(e.target.value)})}/>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Revenda - Comissão de Recorrência (%) *</label>
+                                                <input type="number" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.comissaoRecorrencia} onChange={e => setFormData({...formData, comissaoRecorrencia: Number(e.target.value)})}/>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Revenda - Imposto de Adesão (R$) *</label>
+                                                <input type="number" step="0.01" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.impostoAdesao} onChange={e => setFormData({...formData, impostoAdesao: Number(e.target.value)})}/>
+                                            </div>
+                                        </div>
+                                    </div>
 
-          <div className="flex justify-center py-2">
-            <img
-              src={logoImg}
-              alt="Digita"
-              className="h-32 w-auto object-contain opacity-90 hover:opacity-100 transition-all duration-300"
-            />
-          </div>
+                                    {/* BOTÕES DE CONTROLE FINAL */}
+                                    <div className="flex justify-between pt-4 border-t border-slate-100">
+                                        <button onClick={() => setCurrentStep(2)} className="text-slate-500 hover:text-slate-800 text-sm font-medium">
+                                            ← Voltar
+                                        </button>
+                                        <button onClick={finalizarVendaCompleta} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2 rounded text-sm shadow-sm transition-colors">
+                                            Salvar e Concluir Contrato ✓
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-          <div className="space-y-1">
-            <button
-              onClick={() => {
-                setCurrentMenu("CLIENTES");
-                setSearchTerm("");
-                setStatusFilter("Todos");
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${currentMenu === "CLIENTES"
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/10 font-bold"
-                  : "hover:bg-slate-800/50 hover:text-slate-200"
-                }`}
-            >
-              <Users size={16} />
-              Clientes Ativos
-            </button>
-
-            <button
-              onClick={() => {
-                setCurrentMenu("REVENDAS");
-                setSearchTerm("");
-                setStatusFilter("Todos");
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${currentMenu === "REVENDAS"
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/10 font-bold"
-                  : "hover:bg-slate-800/50 hover:text-slate-200"
-                }`}
-            >
-              <UserPlus size={16} />
-              Canais & Revendas
-            </button>
-          </div>
+                        </div>
+                    </div>
+                )}
+            </main>
         </div>
-      </div>
-
-      {/* CONTEÚDO PRINCIPAL */}
-      <div className="flex-1 min-w-0 px-6 py-6 overflow-y-auto space-y-5">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-              Gestão de Contratos & Clientes
-            </h1>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              {currentMenu === "CLIENTES"
-                ? "Gerencie os registros unificados enviados pelos seus canais."
-                : "Acesse uma revenda para gerenciar seus técnicos de suporte autorizados."}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-            <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold cursor-pointer transition-all shadow-sm">
-              <Upload size={14} className="text-slate-500" />
-              Importar Planilha
-              <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
-            </label>
-            {currentMenu === "CLIENTES" ? (
-              <button
-                onClick={() => setIsCustomerModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-600/10"
-              >
-                <Plus size={14} /> Novo Cliente
-              </button>
-            ) : (
-              <button
-                onClick={() => setIsRevendaModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-600/10"
-              >
-                <Plus size={14} /> Nova Revenda
-              </button>
-            )}
-
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded-xl transition-all duration-200 shadow-sm"
-            >
-              <LogOut size={13} />
-              Sair
-            </button>
-          </div>
-        </div>
-
-        {/* CARDS NUMÉRICOS */}
-        {currentMenu === "CLIENTES" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fadeIn">
-            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Clientes</p>
-                <h3 className="text-lg font-bold text-slate-800 mt-0.5">{totalClientes}</h3>
-              </div>
-              <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><Users size={18} /></div>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pendentes</p>
-                <h3 className="text-lg font-bold text-slate-800 mt-0.5">{pendentes}</h3>
-              </div>
-              <div className="p-2 bg-slate-100 rounded-lg text-slate-500"><FileText size={18} /></div>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Em Processo</p>
-                <h3 className="text-lg font-bold text-slate-800 mt-0.5">{emProcesso}</h3>
-              </div>
-              <div className="p-2 bg-amber-50 rounded-lg text-amber-600"><FileText size={18} /></div>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Finalizados</p>
-                <h3 className="text-lg font-bold text-slate-800 mt-0.5">{finalizados}</h3>
-              </div>
-              <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600"><FileText size={18} /></div>
-            </div>
-          </div>
-        )}
-
-        {/* FILTROS */}
-        <div className="flex flex-col sm:flex-row gap-3 items-center bg-white p-3.5 rounded-xl border border-slate-100 shadow-sm">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-2.5 text-slate-400" size={15} />
-            <input
-              type="text"
-              placeholder={currentMenu === "CLIENTES" ? "Buscar por nome, CPF/CNPJ ou cidade..." : "Buscar revenda por nome, CNPJ ou cidade..."}
-              className="w-full bg-slate-50/50 pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Filter size={13} className="text-slate-400 shrink-0" />
-            <select
-              className="w-full sm:w-40 bg-slate-50/50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-600 focus:outline-none"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="Todos">Todos os Status</option>
-              {currentMenu === "CLIENTES" ? (
-                <>
-                  <option value="PENDENTE">Pendente</option>
-                  <option value="EM_PROCESSO">Em Processo</option>
-                  <option value="FINALIZADO">Finalizado</option>
-                </>
-              ) : (
-                <>
-                  <option value="Ativo">Ativo</option>
-                  <option value="Cancelado">Cancelado</option>
-                  <option value="Congelado">Congelado</option>
-                </>
-              )}
-            </select>
-          </div>
-        </div>
-
-        {/* TABELAS COMPACTAS */}
-        {currentMenu === "CLIENTES" ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <table className="w-full text-left border-collapse table-fixed">
-              <thead>
-                <tr className="bg-slate-50/75 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  <th className="p-3 w-1/4">Razão Social / Cliente</th>
-                  <th className="p-3 w-1/5">CNPJ / CPF</th>
-                  <th className="p-3 w-1/5">Cidade / UF</th>
-                  <th className="p-3 w-1/4">Revenda</th>
-                  <th className="p-3 text-center w-28">Status</th>
-                  <th className="p-3 text-center w-16">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs text-slate-600">
-                {filteredCustomers.map((customer) => (
-                  <tr 
-                    key={customer.id} 
-                    onClick={() => openEditModal(customer)} 
-                    className="hover:bg-blue-50/40 cursor-pointer transition-colors"
-                  >
-                    <td className="p-3 font-semibold text-slate-900 truncate">{customer.razao_social}</td>
-                    <td className="p-3 font-mono text-slate-500 truncate">{customer.cnpj_cpf}</td>
-                    <td className="p-3 truncate">
-                      {customer.cidade ? (
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin size={11} className="text-slate-400 shrink-0" />
-                          {customer.cidade} - {customer.estado}
-                        </span>
-                      ) : (
-                        <span className="text-slate-300 italic">Não informado</span>
-                      )}
-                    </td>
-                    <td className="p-3 truncate text-slate-700 font-semibold">
-                      {customer.user?.nome || <span className="text-slate-300 italic">Sem Revenda</span>}
-                    </td>
-                    <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleStatusChange(customer.id, customer.status_cadastro)}
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
-                          customer.status_cadastro === "FINALIZADO"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100"
-                            : customer.status_cadastro === "EM_PROCESSO"
-                            ? "bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100"
-                            : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
-                        }`}
-                      >
-                        {customer.status_cadastro === "PENDENTE" ? "Pendente" : customer.status_cadastro === "EM_PROCESSO" ? "Em Processo" : "Finalizado"}
-                      </button>
-                    </td>
-                    <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => openEditModal(customer)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                      >
-                        <Pencil size={13} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <table className="w-full text-left border-collapse table-fixed">
-              <thead>
-                <tr className="bg-slate-50/75 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  <th className="p-3 pl-5 w-1/4">Revenda / Empresa</th>
-                  <th className="p-3 w-1/5">CNPJ / CPF</th>
-                  <th className="p-3 w-1/5">Localização</th>
-                  <th className="p-3 w-1/4">E-mail Comercial / Contato</th>
-                  <th className="p-3 text-center w-24">Status</th>
-                  <th className="p-3 text-center w-16">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs text-slate-600">
-                {filteredRevendas.map((rev) => (
-                  <tr
-                    key={rev.id}
-                    onClick={() => handleRowClick(rev)}
-                    className="hover:bg-blue-50/40 cursor-pointer transition-colors"
-                  >
-                    <td className="p-3 pl-5 font-bold text-slate-900 truncate">{rev.nome}</td>
-                    <td className="p-3 font-mono text-slate-600 truncate">{rev.cnpj}</td>
-                    <td className="p-3 truncate">
-                      {rev.cidade ? (
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin size={11} className="text-slate-400 shrink-0" />
-                          {rev.cidade} - {rev.estado}
-                        </span>
-                      ) : (
-                        <span className="text-slate-300 italic">Não configurada</span>
-                      )}
-                    </td>
-                    <td className="p-3 truncate">
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-slate-900 font-semibold truncate">{rev.email}</span>
-                        <span className="text-slate-400 text-[10px] truncate">{rev.telefone || "Sem Telefone"}</span>
-                      </div>
-                    </td>
-                    <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${rev.status === "Ativo" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : rev.status === "Congelado" ? "bg-amber-50 text-amber-700 border-amber-100" : "bg-slate-100 text-slate-600"}`}>
-                        {rev.status}
-                      </span>
-                    </td>
-                    <td className="p-3 text-center">
-                      <button
-                        onClick={(e) => handleGearClick(e, rev)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                      >
-                        <Settings size={13} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Os modais permanecem mantidos no final conforme a estrutura do arquivo... */}
-    </div>
-  );
+    );
 }
-
-export default App;
