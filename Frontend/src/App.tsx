@@ -51,7 +51,7 @@ export default function App() {
         razaoSocial: '',
         cnpj: '',
         email: '',
-        telefone: '', // Novo campo adicionado!
+        telefone: '', 
         cidade: '',
         uf: '',
 
@@ -70,7 +70,7 @@ export default function App() {
         parcelasAdesao: 1,
         parcelasRecorrencia: 1,
         referenciaMensal: 0,
-        valorAdesao: 199.00, // Custo inicial padrão
+        valorAdesao: 199.00, 
         valorRecorrencia: 0, 
 
         // Regras de Comissões movidas para a mesma tela financeira
@@ -98,7 +98,19 @@ export default function App() {
     }, [formData.plano, formData.recorrencia]);
 
     const limparCidadesAoMudarUF = (estadoSelecionado: string) => {
-        setFormData({ ...formData, uf: estadoSelecionado, cidade: '' });
+        setFormData({ ...formData, uf: estadoSelecionado, city: '', cidade: '' });
+    };
+
+    // ==========================================
+    // NOVA FUNÇÃO DECLARADA AQUI ABAIXO:
+    // ==========================================
+    const finalizarVendaCompleta = () => {
+        console.log("Contrato salvo com sucesso! Dados enviados:", formData);
+        alert(`Contrato de ${formData.razaoSocial} salvo com sucesso!`);
+        
+        // Fecha o modal e resgata o estado inicial do formulário se desejar
+        setIsModalOpen(false);
+        setCurrentStep(1);
     };
 
     return (
@@ -136,7 +148,7 @@ export default function App() {
                                 <span className={currentStep === 3 ? "text-blue-600 border-b-2 border-blue-600 pb-4 -mb-[18px]" : "text-slate-400"}>3. FINANCEIRO & COMISSÕES</span>
                             </div>
 
-                            {/* ETAPA 1: CLIENTE (COM TELEFONE E COMPORTAMENTO IBGE) */}
+                            {/* ETAPA 1: CLIENTE */}
                             {currentStep === 1 && (
                                 <div className="space-y-4 pt-2">
                                     <h3 className="text-base font-bold text-slate-900">Dados Básicos do Cliente</h3>
@@ -216,7 +228,7 @@ export default function App() {
                                 </div>
                             )}
 
-                            {/* ETAPA 2: PRODUTO (LISTANDO TODOS OS 30 PLANOS DA ARVORE) */}
+                            {/* ETAPA 2: PRODUTO */}
                             {currentStep === 2 && (
                                 <div className="space-y-6 pt-2">
                                     <div>
@@ -288,7 +300,7 @@ export default function App() {
                                 </div>
                             )}
 
-                            {/* ETAPA 3: FINANCEIRO & COMISSÕES INTEGRADOS EM CARD BOXES TOTALMENTE EDITÁVEIS */}
+                            {/* ETAPA 3: FINANCEIRO & COMISSÕES */}
                             {currentStep === 3 && (
                                 <div className="space-y-6 pt-2">
                                     
@@ -340,7 +352,7 @@ export default function App() {
                                             </div>
                                         </div>
 
-                                        {/* BOXES EDITÁVEIS DE VALORES (PRODUTOS DE ENTRADA DO BOX) */}
+                                        {/* BOXES EDITÁVEIS DE VALORES */}
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Referência Mensal (R$)</label>
@@ -357,7 +369,7 @@ export default function App() {
                                         </div>
                                     </div>
 
-                                    {/* UNIFICAÇÃO DA TELA DE COMISSÕES (INTEGRADA NO MESMO PASSO) */}
+                                    {/* UNIFICAÇÃO DA TELA DE COMISSÕES */}
                                     <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
                                         <h4 className="text-sm font-bold text-slate-900 tracking-wide uppercase border-b pb-2 text-amber-600">Regras de Comissão e Imposto</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
