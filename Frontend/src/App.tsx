@@ -34,13 +34,6 @@ const TABELA_PRECOS: Record<string, { RefMensal: number; Mensal: number; Trimest
     '1000GB': { RefMensal: 1099, Mensal: 1099, Trimestral: 3297, Semestral: 6264.30, Anual: 11869.20 }
 };
 
-const DADOS_IBGE: Record<string, string[]> = {
-    'PR': ['Cascavel', 'Curitiba', 'Foz do Iguaçu', 'Londrina', 'Maringá'],
-    'SP': ['São Paulo', 'Campinas', 'Santos', 'São Bernardo do Campo'],
-    'SC': ['Florianópolis', 'Blumenau', 'Joinville', 'Chapecó'],
-    'RS': ['Porto Alegre', 'Caxias do Sul', 'Passo Fundo', 'Gramado']
-};
-
 // Estado inicial limpo para resetar o formulário
 const ESTADO_INICIAL = {
     id: '',
@@ -71,13 +64,28 @@ const ESTADO_INICIAL = {
 };
 
 export default function App() {
+    const [estados, setEstados] = useState<any[]>([]);
+    const [cidades, setCidades] = useState<string[]>([]);
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState(ESTADO_INICIAL);
 
+    //Dados IBGE
+    useEffect(() => {
+        fetch(
+            "https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome"
+        )
+            .then((res) => res.json())
+            .then((data) => setEstados(data))
+            .catch((err) => console.error("Erro ao carregar estados:", err));
+    }, []);
+
+
     // Lista simulando o Banco de Dados de contratos salvos
     const [listaContratos, setListaContratos] = useState<any[]>([]);
     const [termoPesquisa, setTermoPesquisa] = useState('');
+
 
     // Atualização dinâmica inteligente de valores
     useEffect(() => {
@@ -97,8 +105,31 @@ export default function App() {
         }
     }, [formData.plano, formData.recorrencia]);
 
-    const limparCidadesAoMudarUF = (estadoSelecionado: string) => {
-        setFormData({ ...formData, uf: estadoSelecionado, cidade: '' });
+    const carregarCidades = async (uf: string) => {
+        setFormData(prev => ({
+            ...prev,
+            uf,
+            cidade: ''
+        }));
+
+        if (!uf) {
+            setCidades([]);
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`
+            );
+
+            const data = await response.json();
+
+            setCidades(
+                data.map((cidade: any) => cidade.nome)
+            );
+        } catch (error) {
+            console.error("Erro ao carregar cidades:", error);
+        }
     };
 
     // 1. AÇÃO DE CANCELAR / SAIR
@@ -148,8 +179,25 @@ export default function App() {
     };
 
     // 4. FUNÇÃO PARA ABRIR CONTRATO PARA EDIÇÃO
-    const handleEditarContrato = (contrato: any) => {
+    const handleEditarContrato = async (contrato: any) => {
         setFormData(contrato);
+
+        if (contrato.uf) {
+            try {
+                const response = await fetch(
+                    `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${contrato.uf}/municipios`
+                );
+
+                const data = await response.json();
+
+                setCidades(
+                    data.map((cidade: any) => cidade.nome)
+                );
+            } catch (error) {
+                console.error("Erro ao carregar cidades:", error);
+            }
+        }
+
         setCurrentStep(1);
         setIsModalOpen(true);
     };
@@ -411,16 +459,16 @@ export default function App() {
                                         </div>
                                         <div>
                                             <label className="block text-xs font-semibold text-slate-600 mb-1">Estado (UF) *</label>
-                                            <select className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.uf} onChange={e => limparCidadesAoMudarUF(e.target.value)}>
+                                            <select className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.uf} onChange={e => carregarCidades(e.target.value)}>
                                                 <option value="">Selecione a UF...</option>
-                                                {Object.keys(DADOS_IBGE).map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                                                {estados.map((estado) => (<option key={estado.id} value={estado.sigla} > {estado.nome} </option>))}
                                             </select>
                                         </div>
                                         <div>
                                             <label className="block text-xs font-semibold text-slate-600 mb-1">Cidade *</label>
                                             <select className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.cidade} disabled={!formData.uf} onChange={e => setFormData({ ...formData, cidade: e.target.value })}>
                                                 <option value="">Selecione a cidade...</option>
-                                                {formData.uf && DADOS_IBGE[formData.uf].map(cidade => <option key={cidade} value={cidade}>{cidade}</option>)}
+                                                {cidades.map((cidade) => (<option key={cidade} value={cidade} > {cidade} </option>))}
                                             </select>
                                         </div>
                                     </div>
@@ -549,7 +597,7 @@ export default function App() {
                                             </button>
 
                                             {/* NOVO: BOTÃO EMITIR PDF */}
-                                            <button onClick={handleGerarPDF} className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded text-sm shadow-sm">
+                                            <button onClick={() => handleGerarPDF(formData)} className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded text-sm shadow-sm">
                                                 Emitir PDF 📄
                                             </button>
 
