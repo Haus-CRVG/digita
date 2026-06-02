@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-// Importando o ícone de lápis e outros utilitários do Lucide React instalado
-import { Pencil, Plus, Search, FileText } from 'lucide-react';
 
 // 1. Dicionário Completo de Planos e Valores
 const TABELA_PRECOS: Record<string, { RefMensal: number; Mensal: number; Trimestral: number; Semestral: number; Anual: number }> = {
@@ -43,6 +41,7 @@ const DADOS_IBGE: Record<string, string[]> = {
     'RS': ['Porto Alegre', 'Caxias do Sul', 'Passo Fundo', 'Gramado']
 };
 
+// Estado inicial limpo para resetar o formulário
 const ESTADO_INICIAL = {
     id: '',
     razaoSocial: '',
@@ -68,25 +67,17 @@ const ESTADO_INICIAL = {
     comissaoAdesao: 100,
     comissaoRecorrencia: 15,
     impostoAdesao: 29.90,
-    status: 'Rascunho'
+    status: 'Rascunho' // 'Rascunho' ou 'Concluído'
 };
 
 export default function App() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState(ESTADO_INICIAL);
+    
+    // Lista simulando o Banco de Dados de contratos salvos
+    const [listaContratos, setListaContratos] = useState<any[]>([]);
     const [termoPesquisa, setTermoPesquisa] = useState('');
-
-    // LISTA SIMULANDO O BANCO DE DADOS (Iniciando com os dados salvos do localStorage se existirem)
-    const [listaContratos, setListaContratos] = useState<any[]>(() => {
-        const contratosSalvos = localStorage.getItem('@prociber:contratos');
-        return contratosSalvos ? JSON.parse(contratosSalvos) : [];
-    });
-
-    // Toda vez que a lista de contratos mudar, atualiza automaticamente o "banco de dados" local
-    useEffect(() => {
-        localStorage.setItem('@prociber:contratos', JSON.stringify(listaContratos));
-    }, [listaContratos]);
 
     // Atualização dinâmica inteligente de valores
     useEffect(() => {
@@ -110,6 +101,7 @@ export default function App() {
         setFormData({ ...formData, uf: estadoSelecionado, cidade: '' });
     };
 
+    // 1. AÇÃO DE CANCELAR / SAIR
     const handleCancelarSair = () => {
         const confirmar = window.confirm("Atenção: Ao sair, todas as alterações não salvas deste formulário serão perdidas. Deseja continuar?");
         if (confirmar) {
@@ -119,9 +111,11 @@ export default function App() {
         }
     };
 
+    // 2. AÇÃO DE SALVAR RASCUNHO (Permite pesquisar e editar depois)
     const handleSalvarRascunho = () => {
         let contratoSalvo = { ...formData };
         
+        // Se for um novo contrato, gera um ID único, senão mantém o existente para atualizar
         if (!contratoSalvo.id) {
             contratoSalvo.id = Math.random().toString(36).substr(2, 9);
             contratoSalvo.status = 'Rascunho';
@@ -130,12 +124,13 @@ export default function App() {
             setListaContratos(listaContratos.map(c => c.id === contratoSalvo.id ? contratoSalvo : c));
         }
 
-        alert(`Rascunho de ${contratoSalvo.razaoSocial} salvo com sucesso no LocalStorage!`);
+        alert(`Rascunho de ${contratoSalvo.razaoSocial} salvo com sucesso! Você pode editá-lo na listagem.`);
         setIsModalOpen(false);
         setFormData(ESTADO_INICIAL);
         setCurrentStep(1);
     };
 
+    // 3. AÇÃO DE CONCLUIR CONTRATO
     const finalizarVendaCompleta = () => {
         let contratoConcluido = { ...formData, status: 'Concluído' };
         
@@ -146,19 +141,22 @@ export default function App() {
             setListaContratos(listaContratos.map(c => c.id === contratoConcluido.id ? contratoConcluido : c));
         }
 
-        alert(`Contrato de ${contratoConcluido.razaoSocial} CONCLUÍDO e persistido com sucesso!`);
+        alert(`Contrato de ${contratoConcluido.razaoSocial} CONCLUÍDO e finalizado com sucesso!`);
         setIsModalOpen(false);
         setFormData(ESTADO_INICIAL);
         setCurrentStep(1);
     };
 
+    // 4. FUNÇÃO PARA ABRIR CONTRATO PARA EDIÇÃO
     const handleEditarContrato = (contrato: any) => {
         setFormData(contrato);
         setCurrentStep(1);
         setIsModalOpen(true);
     };
 
+    // 5. EMISSÃO DO ORÇAMENTO EM PDF (Layout exato do anexo)
     const handleGerarPDF = () => {
+        // Monta uma estrutura HTML limpa em uma nova aba configurada para impressão nativa do navegador (Salvar como PDF)
         const totalProposta = formData.valorRecorrencia + formData.valorAdesao;
         const dataHoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -175,7 +173,7 @@ export default function App() {
                         .grid-dados { margin-left: 10px; margin-top: 5px; margin-bottom: 15px; }
                         .label { font-weight: bold; color: #1e293b; margin-top: 5px; }
                         .value { margin-left: 15px; color: #475569; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                        table { w-full; width: 100%; border-collapse: collapse; margin-top: 15px; }
                         th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
                         th { background: #f8fafc; font-weight: bold; }
                         .total-row { font-weight: bold; background: #f1f5f9; }
@@ -254,6 +252,7 @@ export default function App() {
         }
     };
 
+    // Filtro dinâmico de pesquisa de clientes salvos
     const contratosFiltrados = listaContratos.filter(c => 
         c.razaoSocial.toLowerCase().includes(termoPesquisa.toLowerCase()) || 
         c.cnpj.includes(termoPesquisa)
@@ -270,33 +269,30 @@ export default function App() {
                 </nav>
             </aside>
 
-            {/* CONTEÚDO PRINCIPAL */}
+            {/* CONTEÚDO PRINCIPAL (COM BUSCA E TABELA DE CONTRATOS) */}
             <main className="flex-1 p-8 overflow-y-auto">
                 <header className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-bold text-slate-900">Gestão de Contratos</h1>
                     <button
                         onClick={() => { setFormData(ESTADO_INICIAL); setCurrentStep(1); setIsModalOpen(true); }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
                     >
-                        <Plus size={16} /> Nuevo Contrato
+                        + Novo Contrato
                     </button>
                 </header>
 
-                {/* BARRA DE PESQUISA */}
-                <div className="mb-6 relative max-w-md">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                        <Search size={18} />
-                    </span>
+                {/* BARRA DE PESQUISA DE NEGOCIAÇÕES */}
+                <div className="mb-6">
                     <input 
                         type="text" 
-                        placeholder="Pesquisar cliente por nome ou CNPJ..."
-                        className="w-full bg-white border border-slate-300 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500 shadow-sm"
+                        placeholder="Pesquisar cliente por nome ou CNPJ para editar valores..."
+                        className="w-full max-w-md bg-white border border-slate-300 rounded-lg p-2 text-sm"
                         value={termoPesquisa}
                         onChange={e => setTermoPesquisa(e.target.value)}
                     />
                 </div>
 
-                {/* LISTAGEM DE CONTRATOS */}
+                {/* LISTAGEM DE CONTRATOS ATIVOS / RASCUNHOS */}
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-xs uppercase">
@@ -315,24 +311,17 @@ export default function App() {
                                 </tr>
                             ) : (
                                 contratosFiltrados.map((contrato) => (
-                                    <tr key={contrato.id} className="hover:bg-slate-50/80 transition-colors">
+                                    <tr key={contrato.id} className="hover:bg-slate-50/80">
                                         <td className="p-4 font-medium text-slate-900">{contrato.razaoSocial}</td>
-                                        <td className="p-4 text-slate-600">{contrato.plano} ({contrato.recorrencia})</td>
-                                        <td className="p-4 font-medium text-slate-700">R$ {(contrato.valorRecorrencia + contrato.valorAdesao).toFixed(2)}</td>
+                                        <td className="p-4">{contrato.plano} ({contrato.recorrencia})</td>
+                                        <td className="p-4">R$ {(contrato.valorRecorrencia + contrato.valorAdesao).toFixed(2)}</td>
                                         <td className="p-4">
                                             <span className={`px-2 py-1 rounded text-xs font-semibold ${contrato.status === 'Concluído' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                                                 {contrato.status}
                                             </span>
                                         </td>
-                                        <td className="p-4 text-center">
-                                            {/* ALTERADO: Botão agora é apenas o ícone de lápis com estilo limpo e tooltip nativa */}
-                                            <button 
-                                                onClick={() => handleEditarContrato(contrato)} 
-                                                className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors inline-flex items-center justify-center"
-                                                title="Editar Valores"
-                                            >
-                                                <Pencil size={16} />
-                                            </button>
+                                        <td className="p-4 text-center space-x-2">
+                                            <button onClick={() => handleEditarContrato(contrato)} className="text-blue-600 hover:text-blue-800 font-medium text-xs">Editar Valores</button>
                                         </td>
                                     </tr>
                                 ))
@@ -383,7 +372,7 @@ export default function App() {
                                         </div>
                                         <div>
                                             <label className="block text-xs font-semibold text-slate-600 mb-1">Cidade *</label>
-                                            <select className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.cidade} disabled={!formData.uf} onChange={e => setFormData({ ...formData, city: e.target.value, cidade: e.target.value })}>
+                                            <select className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.cidade} disabled={!formData.uf} onChange={e => setFormData({ ...formData, cidade: e.target.value })}>
                                                 <option value="">Selecione a cidade...</option>
                                                 {formData.uf && DADOS_IBGE[formData.uf].map(cidade => <option key={cidade} value={cidade}>{cidade}</option>)}
                                             </select>
@@ -445,7 +434,7 @@ export default function App() {
                                 </div>
                             )}
 
-                            {/* ETAPA 3: FINANCEIRO */}
+                            {/* ETAPA 3: FINANCEIRO & COMISSÕES */}
                             {currentStep === 3 && (
                                 <div className="space-y-6 pt-2">
                                     <div className="bg-blue-50/70 border border-blue-100 p-3 rounded-lg text-xs text-blue-800 flex justify-between items-center">
@@ -453,6 +442,7 @@ export default function App() {
                                         <div><strong>Ref. Mensal Base:</strong> R$ {formData.referenciaMensal.toFixed(2)}</div>
                                     </div>
 
+                                    {/* CONFIGURAÇÃO DE PAGAMENTO */}
                                     <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
                                         <h4 className="text-sm font-bold text-slate-900 tracking-wide uppercase border-b pb-2 text-blue-600">Configurações de Faturamento</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -471,32 +461,66 @@ export default function App() {
                                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Primeiro Vencimento da Adesão</label>
                                                 <input type="date" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.vencimentoAdesao} onChange={e => setFormData({...formData, vencimentoAdesao: e.target.value})}/>
                                             </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Forma de Pagamento - Recorrência *</label>
+                                                <input type="text" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.formaRecorrencia} onChange={e => setFormData({...formData, formaRecorrencia: e.target.value})}/>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Primeiro Vencimento da Recorrência</label>
+                                                <input type="date" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.vencimentoRecorrencia} onChange={e => setFormData({...formData, vencimentoRecorrencia: e.target.value})}/>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Recorrência do Pagamento *</label>
+                                                <input type="text" className="w-full bg-slate-100 border border-slate-300 rounded p-2 text-sm font-semibold" value={formData.recorrencia} readOnly />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Referência Mensal (R$)</label>
+                                                <input type="number" className="w-full bg-slate-100 border border-slate-300 rounded p-2 text-sm font-medium" value={formData.referenciaMensal} readOnly/>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-700 mb-1">Valor de Adesão / Implantação (R$) *</label>
+                                                <input type="number" step="0.01" className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold" value={formData.valorAdesao} onChange={e => setFormData({...formData, valorAdesao: Number(e.target.value)})}/>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-700 mb-1">Valor de Recorrência (R$) *</label>
+                                                <input type="number" step="0.01" className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold" value={formData.valorRecorrencia} onChange={e => setFormData({...formData, valorRecorrencia: Number(e.target.value)})}/>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="flex justify-between items-center pt-4 border-t border-slate-100">
-                                        <div className="space-x-2">
-                                            <button onClick={handleCancelarSair} className="text-red-500 hover:text-red-700 text-sm font-medium">Sair sem salvar</button>
-                                            <button onClick={() => setCurrentStep(2)} className="text-slate-500 hover:text-slate-800 text-sm font-medium px-2">Voltar</button>
-                                        </div>
+                                    {/* CONTROLES E NOVOS BOTÕES */}
+                                    <div className="flex justify-between pt-4 border-t border-slate-100 items-center">
+                                        <button onClick={handleCancelarSair} className="text-red-500 hover:text-red-700 text-sm font-medium">
+                                            Cancelar
+                                        </button>
                                         
-                                        <div className="space-x-2 flex">
-                                            <button 
-                                                onClick={handleGerarPDF} 
-                                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-4 py-2 rounded text-sm flex items-center gap-1.5 transition-colors"
-                                            >
-                                                <FileText size={16} /> Emitir Orçamento
+                                        <div className="flex space-x-2">
+                                            <button onClick={() => setCurrentStep(2)} className="text-slate-500 hover:text-slate-800 text-sm font-medium px-3">
+                                                Voltar
                                             </button>
-                                            <button onClick={handleSalvarRascunho} className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded text-sm shadow-sm transition-colors">
-                                                Salvar Rascunho
+                                            
+                                            {/* NOVO: BOTÃO EMITIR PDF */}
+                                            <button onClick={handleGerarPDF} className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded text-sm shadow-sm">
+                                                Emitir PDF 📄
                                             </button>
-                                            <button onClick={finalizarVendaCompleta} className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2 rounded text-sm shadow-sm transition-colors">
-                                                Concluir Venda ✔
+                                            
+                                            {/* NOVO: BOTÃO SALVAR RASCUNHO */}
+                                            <button onClick={handleSalvarRascunho} className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded text-sm shadow-sm">
+                                                Salvar Rascunho 💾
+                                            </button>
+                                            
+                                            {/* ALTERADO: NOMENCLATURA CONCLUIR */}
+                                            <button onClick={finalizarVendaCompleta} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded text-sm shadow-sm">
+                                                Concluir ✓
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                             )}
+
                         </div>
                     </div>
                 )}
