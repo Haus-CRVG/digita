@@ -2,5 +2,8 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",
     "postcss": "^8.5.14"
+  },
+  "dependencies": {
+    "lucide-react": "^1.17.0"
   }
 }
