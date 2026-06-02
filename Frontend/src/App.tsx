@@ -2,36 +2,36 @@ import React, { useState, useEffect } from 'react';
 
 // 1. Dicionário Completo de Planos e Valores
 const TABELA_PRECOS: Record<string, { RefMensal: number; Mensal: number; Trimestral: number; Semestral: number; Anual: number }> = {
-    '3GB':   { RefMensal: 69,   Mensal: 69,   Trimestral: 207,   Semestral: 393.30,   Anual: 745.20 },
-    '5GB':   { RefMensal: 89,   Mensal: 89,   Trimestral: 267,   Semestral: 507.30,   Anual: 961.20 },
-    '6GB':   { RefMensal: 99,   Mensal: 99,   Trimestral: 297,   Semestral: 564.30,   Anual: 1069.20 },
-    '7GB':   { RefMensal: 109,  Mensal: 109,  Trimestral: 327,   Semestral: 621.30,   Anual: 1177.20 },
-    '8GB':   { RefMensal: 129,  Mensal: 129,  Trimestral: 387,   Semestral: 735.30,   Anual: 1393.20 },
-    '9GB':   { RefMensal: 139,  Mensal: 139,  Trimestral: 417,   Semestral: 792.30,   Anual: 1501.20 },
-    '10GB':  { RefMensal: 149,  Mensal: 149,  Trimestral: 447,   Semestral: 849.30,   Anual: 1609.20 },
-    '20GB':  { RefMensal: 159,  Mensal: 159,  Trimestral: 477,   Semestral: 906.30,   Anual: 1717.20 },
-    '30GB':  { RefMensal: 169,  Mensal: 169,  Trimestral: 507,   Semestral: 963.30,   Anual: 1825.20 },
-    '40GB':  { RefMensal: 179,  Mensal: 179,  Trimestral: 537,   Semestral: 1020.30,  Anual: 1933.20 },
-    '50GB':  { RefMensal: 189,  Mensal: 189,  Trimestral: 567,   Semestral: 1077.30,  Anual: 2041.20 },
-    '100GB': { RefMensal: 249,  Mensal: 249,  Trimestral: 747,   Semestral: 1419.30,  Anual: 2689.20 },
-    '150GB': { RefMensal: 299,  Mensal: 299,  Trimestral: 897,   Semestral: 1704.30,  Anual: 3229.20 },
-    '200GB': { RefMensal: 379,  Mensal: 379,  Trimestral: 1137,  Semestral: 2160.30,  Anual: 4093.20 },
-    '250GB': { RefMensal: 399,  Mensal: 399,  Trimestral: 1197,  Semestral: 2274.30,  Anual: 4309.20 },
-    '300GB': { RefMensal: 449,  Mensal: 449,  Trimestral: 1347,  Semestral: 2559.30,  Anual: 4849.20 },
-    '350GB': { RefMensal: 479,  Mensal: 479,  Trimestral: 1437,  Semestral: 2730.30,  Anual: 5173.20 },
-    '400GB': { RefMensal: 499,  Mensal: 499,  Trimestral: 1497,  Semestral: 2844.30,  Anual: 5389.20 },
-    '450GB': { RefMensal: 549,  Mensal: 549,  Trimestral: 1647,  Semestral: 3129.30,  Anual: 5929.20 },
-    '500GB': { RefMensal: 599,  Mensal: 599,  Trimestral: 1797,  Semestral: 3414.30,  Anual: 6469.20 },
-    '550GB': { RefMensal: 649,  Mensal: 649,  Trimestral: 1947,  Semestral: 3699.30,  Anual: 7009.20 },
-    '600GB': { RefMensal: 699,  Mensal: 699,  Trimestral: 2097,  Semestral: 3984.30,  Anual: 7549.20 },
-    '650GB': { RefMensal: 749,  Mensal: 749,  Trimestral: 2247,  Semestral: 4269.30,  Anual: 8089.20 },
-    '700GB': { RefMensal: 799,  Mensal: 799,  Trimestral: 2397,  Semestral: 4554.30,  Anual: 8629.20 },
-    '750GB': { RefMensal: 849,  Mensal: 849,  Trimestral: 2547,  Semestral: 4839.30,  Anual: 9169.20 },
-    '800GB': { RefMensal: 899,  Mensal: 899,  Trimestral: 2697,  Semestral: 5124.30,  Anual: 9709.20 },
-    '850GB': { RefMensal: 949,  Mensal: 949,  Trimestral: 2847,  Semestral: 5409.30,  Anual: 10249.20 },
-    '900GB': { RefMensal: 999,  Mensal: 999,  Trimestral: 2997,  Semestral: 5694.30,  Anual: 10789.20 },
-    '950GB': { RefMensal: 1049, Mensal: 1049, Trimestral: 3147,  Semestral: 5979.30,  Anual: 11329.20 },
-    '1000GB':{ RefMensal: 1099, Mensal: 1099, Trimestral: 3297,  Semestral: 6264.30,  Anual: 11869.20 }
+    '3GB': { RefMensal: 69, Mensal: 69, Trimestral: 207, Semestral: 393.30, Anual: 745.20 },
+    '5GB': { RefMensal: 89, Mensal: 89, Trimestral: 267, Semestral: 507.30, Anual: 961.20 },
+    '6GB': { RefMensal: 99, Mensal: 99, Trimestral: 297, Semestral: 564.30, Anual: 1069.20 },
+    '7GB': { RefMensal: 109, Mensal: 109, Trimestral: 327, Semestral: 621.30, Anual: 1177.20 },
+    '8GB': { RefMensal: 129, Mensal: 129, Trimestral: 387, Semestral: 735.30, Anual: 1393.20 },
+    '9GB': { RefMensal: 139, Mensal: 139, Trimestral: 417, Semestral: 792.30, Anual: 1501.20 },
+    '10GB': { RefMensal: 149, Mensal: 149, Trimestral: 447, Semestral: 849.30, Anual: 1609.20 },
+    '20GB': { RefMensal: 159, Mensal: 159, Trimestral: 477, Semestral: 906.30, Anual: 1717.20 },
+    '30GB': { RefMensal: 169, Mensal: 169, Trimestral: 507, Semestral: 963.30, Anual: 1825.20 },
+    '40GB': { RefMensal: 179, Mensal: 179, Trimestral: 537, Semestral: 1020.30, Anual: 1933.20 },
+    '50GB': { RefMensal: 189, Mensal: 189, Trimestral: 567, Semestral: 1077.30, Anual: 2041.20 },
+    '100GB': { RefMensal: 249, Mensal: 249, Trimestral: 747, Semestral: 1419.30, Anual: 2689.20 },
+    '150GB': { RefMensal: 299, Mensal: 299, Trimestral: 897, Semestral: 1704.30, Anual: 3229.20 },
+    '200GB': { RefMensal: 379, Mensal: 379, Trimestral: 1137, Semestral: 2160.30, Anual: 4093.20 },
+    '250GB': { RefMensal: 399, Mensal: 399, Trimestral: 1197, Semestral: 2274.30, Anual: 4309.20 },
+    '300GB': { RefMensal: 449, Mensal: 449, Trimestral: 1347, Semestral: 2559.30, Anual: 4849.20 },
+    '350GB': { RefMensal: 479, Mensal: 479, Trimestral: 1437, Semestral: 2730.30, Anual: 5173.20 },
+    '400GB': { RefMensal: 499, Mensal: 499, Trimestral: 1497, Semestral: 2844.30, Anual: 5389.20 },
+    '450GB': { RefMensal: 549, Mensal: 549, Trimestral: 1647, Semestral: 3129.30, Anual: 5929.20 },
+    '500GB': { RefMensal: 599, Mensal: 599, Trimestral: 1797, Semestral: 3414.30, Anual: 6469.20 },
+    '550GB': { RefMensal: 649, Mensal: 649, Trimestral: 1947, Semestral: 3699.30, Anual: 7009.20 },
+    '600GB': { RefMensal: 699, Mensal: 699, Trimestral: 2097, Semestral: 3984.30, Anual: 7549.20 },
+    '650GB': { RefMensal: 749, Mensal: 749, Trimestral: 2247, Semestral: 4269.30, Anual: 8089.20 },
+    '700GB': { RefMensal: 799, Mensal: 799, Trimestral: 2397, Semestral: 4554.30, Anual: 8629.20 },
+    '750GB': { RefMensal: 849, Mensal: 849, Trimestral: 2547, Semestral: 4839.30, Anual: 9169.20 },
+    '800GB': { RefMensal: 899, Mensal: 899, Trimestral: 2697, Semestral: 5124.30, Anual: 9709.20 },
+    '850GB': { RefMensal: 949, Mensal: 949, Trimestral: 2847, Semestral: 5409.30, Anual: 10249.20 },
+    '900GB': { RefMensal: 999, Mensal: 999, Trimestral: 2997, Semestral: 5694.30, Anual: 10789.20 },
+    '950GB': { RefMensal: 1049, Mensal: 1049, Trimestral: 3147, Semestral: 5979.30, Anual: 11329.20 },
+    '1000GB': { RefMensal: 1099, Mensal: 1099, Trimestral: 3297, Semestral: 6264.30, Anual: 11869.20 }
 };
 
 const DADOS_IBGE: Record<string, string[]> = {
@@ -47,7 +47,7 @@ const ESTADO_INICIAL = {
     razaoSocial: '',
     cnpj: '',
     email: '',
-    telefone: '', 
+    telefone: '',
     cidade: '',
     uf: '',
     dataImplantacao: '',
@@ -62,8 +62,8 @@ const ESTADO_INICIAL = {
     parcelasAdesao: 1,
     parcelasRecorrencia: 1,
     referenciaMensal: 0,
-    valorAdesao: 0, 
-    valorRecorrencia: 0, 
+    valorAdesao: 0,
+    valorRecorrencia: 0,
     comissaoAdesao: 100,
     comissaoRecorrencia: 15,
     impostoAdesao: 29.90,
@@ -74,7 +74,7 @@ export default function App() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState(ESTADO_INICIAL);
-    
+
     // Lista simulando o Banco de Dados de contratos salvos
     const [listaContratos, setListaContratos] = useState<any[]>([]);
     const [termoPesquisa, setTermoPesquisa] = useState('');
@@ -114,7 +114,7 @@ export default function App() {
     // 2. AÇÃO DE SALVAR RASCUNHO (Permite pesquisar e editar depois)
     const handleSalvarRascunho = () => {
         let contratoSalvo = { ...formData };
-        
+
         // Se for um novo contrato, gera um ID único, senão mantém o existente para atualizar
         if (!contratoSalvo.id) {
             contratoSalvo.id = Math.random().toString(36).substr(2, 9);
@@ -133,7 +133,7 @@ export default function App() {
     // 3. AÇÃO DE CONCLUIR CONTRATO
     const finalizarVendaCompleta = () => {
         let contratoConcluido = { ...formData, status: 'Concluído' };
-        
+
         if (!contratoConcluido.id) {
             contratoConcluido.id = Math.random().toString(36).substr(2, 9);
             setListaContratos([...listaContratos, contratoConcluido]);
@@ -155,9 +155,9 @@ export default function App() {
     };
 
     // 5. EMISSÃO DO ORÇAMENTO EM PDF (Layout exato do anexo)
-    const handleGerarPDF = () => {
+    const handleGerarPDF = (contratoParaPdf: any) => {
         // Monta uma estrutura HTML limpa em uma nova aba configurada para impressão nativa do navegador (Salvar como PDF)
-        const totalProposta = formData.valorRecorrencia + formData.valorAdesao;
+        const totalProposta = contratoParaPdf.valorRecorrencia + contratoParaPdf.valorAdesao;
         const dataHoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 
         const janelaImpressao = window.open('', '_blank');
@@ -191,11 +191,11 @@ export default function App() {
 
                     <div class="section-title">Dados do cliente</div>
                     <div class="grid-dados">
-                        <div class="label">Cliente:</div><div class="value">${formData.razaoSocial || '-------------------------'}</div>
-                        <div class="label">CNPJ / CPF:</div><div class="value">${formData.cnpj || '-------------------------'}</div>
-                        <div class="label">Endereço:</div><div class="value">${formData.cidade} - ${formData.uf || '-------------------------'}</div>
-                        <div class="label">Telefone:</div><div class="value">${formData.telefone || '-------------------------'}</div>
-                        <div class="label">E-mail:</div><div class="value">${formData.email || '-------------------------'}</div>
+                        <div class="label">Cliente:</div><div class="value">${contratoParaPdf.razaoSocial || '-------------------------'}</div>
+                        <div class="label">CNPJ / CPF:</div><div class="value">${contratoParaPdf.cnpj || '-------------------------'}</div>
+                        <div class="label">Endereço:</div><div class="value">${contratoParaPdf.cidade} - ${contratoParaPdf.uf || '-------------------------'}</div>
+                        <div class="label">Telefone:</div><div class="value">${contratoParaPdf.telefone || '-------------------------'}</div>
+                        <div class="label">E-mail:</div><div class="value">${contratoParaPdf.email || '-------------------------'}</div>
                     </div>
 
                     <div class="section-title">Dados do fornecedor</div>
@@ -253,8 +253,8 @@ export default function App() {
     };
 
     // Filtro dinâmico de pesquisa de clientes salvos
-    const contratosFiltrados = listaContratos.filter(c => 
-        c.razaoSocial.toLowerCase().includes(termoPesquisa.toLowerCase()) || 
+    const contratosFiltrados = listaContratos.filter(c =>
+        c.razaoSocial.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
         c.cnpj.includes(termoPesquisa)
     );
 
@@ -283,8 +283,8 @@ export default function App() {
 
                 {/* BARRA DE PESQUISA DE NEGOCIAÇÕES */}
                 <div className="mb-6">
-                    <input 
-                        type="text" 
+                    <input
+                        type="text"
                         placeholder="Pesquisar cliente por nome ou CNPJ para editar valores..."
                         className="w-full max-w-md bg-white border border-slate-300 rounded-lg p-2 text-sm"
                         value={termoPesquisa}
@@ -320,8 +320,54 @@ export default function App() {
                                                 {contrato.status}
                                             </span>
                                         </td>
-                                        <td className="p-4 text-center space-x-2">
-                                            <button onClick={() => handleEditarContrato(contrato)} className="text-blue-600 hover:text-blue-800 font-medium text-xs">Editar Valores</button>
+                                        <td className="p-4 text-center">
+                                            <div className="flex items-center justify-center space-x-3">
+
+                                                {/* Editar */}
+                                                <button
+                                                    onClick={() => handleEditarContrato(contrato)}
+                                                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                    title="Editar Valores"
+                                                >
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        strokeWidth={2}
+                                                        stroke="currentColor"
+                                                        className="w-4 h-4"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+                                                        />
+                                                    </svg>
+                                                </button>
+
+                                                {/* PDF */}
+                                                <button
+                                                    onClick={() => handleGerarPDF(contrato)}
+                                                    className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                    title="Gerar PDF"
+                                                >
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        strokeWidth={2}
+                                                        stroke="currentColor"
+                                                        className="w-4 h-4"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                                                        />
+                                                    </svg>
+                                                </button>
+
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -448,26 +494,26 @@ export default function App() {
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Faturado *</label>
-                                                <select className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.faturado} onChange={e => setFormData({...formData, faturado: e.target.value})}>
+                                                <select className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.faturado} onChange={e => setFormData({ ...formData, faturado: e.target.value })}>
                                                     <option value="Sim">Sim</option>
                                                     <option value="Não">Não</option>
                                                 </select>
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Forma de Pagamento - Adesão *</label>
-                                                <input type="text" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.formaAdesao} onChange={e => setFormData({...formData, formaAdesao: e.target.value})}/>
+                                                <input type="text" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.formaAdesao} onChange={e => setFormData({ ...formData, formaAdesao: e.target.value })} />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Primeiro Vencimento da Adesão</label>
-                                                <input type="date" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.vencimentoAdesao} onChange={e => setFormData({...formData, vencimentoAdesao: e.target.value})}/>
+                                                <input type="date" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.vencimentoAdesao} onChange={e => setFormData({ ...formData, vencimentoAdesao: e.target.value })} />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Forma de Pagamento - Recorrência *</label>
-                                                <input type="text" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.formaRecorrencia} onChange={e => setFormData({...formData, formaRecorrencia: e.target.value})}/>
+                                                <input type="text" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.formaRecorrencia} onChange={e => setFormData({ ...formData, formaRecorrencia: e.target.value })} />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Primeiro Vencimento da Recorrência</label>
-                                                <input type="date" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.vencimentoRecorrencia} onChange={e => setFormData({...formData, vencimentoRecorrencia: e.target.value})}/>
+                                                <input type="date" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.vencimentoRecorrencia} onChange={e => setFormData({ ...formData, vencimentoRecorrencia: e.target.value })} />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Recorrência do Pagamento *</label>
@@ -478,15 +524,15 @@ export default function App() {
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Referência Mensal (R$)</label>
-                                                <input type="number" className="w-full bg-slate-100 border border-slate-300 rounded p-2 text-sm font-medium" value={formData.referenciaMensal} readOnly/>
+                                                <input type="number" className="w-full bg-slate-100 border border-slate-300 rounded p-2 text-sm font-medium" value={formData.referenciaMensal} readOnly />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-700 mb-1">Valor de Adesão / Implantação (R$) *</label>
-                                                <input type="number" step="0.01" className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold" value={formData.valorAdesao} onChange={e => setFormData({...formData, valorAdesao: Number(e.target.value)})}/>
+                                                <input type="number" step="0.01" className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold" value={formData.valorAdesao} onChange={e => setFormData({ ...formData, valorAdesao: Number(e.target.value) })} />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-700 mb-1">Valor de Recorrência (R$) *</label>
-                                                <input type="number" step="0.01" className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold" value={formData.valorRecorrencia} onChange={e => setFormData({...formData, valorRecorrencia: Number(e.target.value)})}/>
+                                                <input type="number" step="0.01" className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold" value={formData.valorRecorrencia} onChange={e => setFormData({ ...formData, valorRecorrencia: Number(e.target.value) })} />
                                             </div>
                                         </div>
                                     </div>
@@ -496,22 +542,22 @@ export default function App() {
                                         <button onClick={handleCancelarSair} className="text-red-500 hover:text-red-700 text-sm font-medium">
                                             Cancelar
                                         </button>
-                                        
+
                                         <div className="flex space-x-2">
                                             <button onClick={() => setCurrentStep(2)} className="text-slate-500 hover:text-slate-800 text-sm font-medium px-3">
                                                 Voltar
                                             </button>
-                                            
+
                                             {/* NOVO: BOTÃO EMITIR PDF */}
                                             <button onClick={handleGerarPDF} className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded text-sm shadow-sm">
                                                 Emitir PDF 📄
                                             </button>
-                                            
+
                                             {/* NOVO: BOTÃO SALVAR RASCUNHO */}
                                             <button onClick={handleSalvarRascunho} className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded text-sm shadow-sm">
                                                 Salvar Rascunho 💾
                                             </button>
-                                            
+
                                             {/* ALTERADO: NOMENCLATURA CONCLUIR */}
                                             <button onClick={finalizarVendaCompleta} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded text-sm shadow-sm">
                                                 Concluir ✓
