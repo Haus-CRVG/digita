@@ -1,315 +1,533 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 // 1. Dicionário Completo de Planos e Valores
-const TABELA_PRECOS: Record<string, { RefMensal: number; Mensal: number; Trimestral: number; Semestral: number; Anual: number }> = {
-    '3GB': { RefMensal: 69, Mensal: 69, Trimestral: 207, Semestral: 393.30, Anual: 745.20 },
-    '5GB': { RefMensal: 89, Mensal: 89, Trimestral: 267, Semestral: 507.30, Anual: 961.20 },
-    '6GB': { RefMensal: 99, Mensal: 99, Trimestral: 297, Semestral: 564.30, Anual: 1069.20 },
-    '7GB': { RefMensal: 109, Mensal: 109, Trimestral: 327, Semestral: 621.30, Anual: 1177.20 },
-    '8GB': { RefMensal: 129, Mensal: 129, Trimestral: 387, Semestral: 735.30, Anual: 1393.20 },
-    '9GB': { RefMensal: 139, Mensal: 139, Trimestral: 417, Semestral: 792.30, Anual: 1501.20 },
-    '10GB': { RefMensal: 149, Mensal: 149, Trimestral: 447, Semestral: 849.30, Anual: 1609.20 },
-    '20GB': { RefMensal: 159, Mensal: 159, Trimestral: 477, Semestral: 906.30, Anual: 1717.20 },
-    '30GB': { RefMensal: 169, Mensal: 169, Trimestral: 507, Semestral: 963.30, Anual: 1825.20 },
-    '40GB': { RefMensal: 179, Mensal: 179, Trimestral: 537, Semestral: 1020.30, Anual: 1933.20 },
-    '50GB': { RefMensal: 189, Mensal: 189, Trimestral: 567, Semestral: 1077.30, Anual: 2041.20 },
-    '100GB': { RefMensal: 249, Mensal: 249, Trimestral: 747, Semestral: 1419.30, Anual: 2689.20 },
-    '150GB': { RefMensal: 299, Mensal: 299, Trimestral: 897, Semestral: 1704.30, Anual: 3229.20 },
-    '200GB': { RefMensal: 379, Mensal: 379, Trimestral: 1137, Semestral: 2160.30, Anual: 4093.20 },
-    '250GB': { RefMensal: 399, Mensal: 399, Trimestral: 1197, Semestral: 2274.30, Anual: 4309.20 },
-    '300GB': { RefMensal: 449, Mensal: 449, Trimestral: 1347, Semestral: 2559.30, Anual: 4849.20 },
-    '350GB': { RefMensal: 479, Mensal: 479, Trimestral: 1437, Semestral: 2730.30, Anual: 5173.20 },
-    '400GB': { RefMensal: 499, Mensal: 499, Trimestral: 1497, Semestral: 2844.30, Anual: 5389.20 },
-    '450GB': { RefMensal: 549, Mensal: 549, Trimestral: 1647, Semestral: 3129.30, Anual: 5929.20 },
-    '500GB': { RefMensal: 599, Mensal: 599, Trimestral: 1797, Semestral: 3414.30, Anual: 6469.20 },
-    '550GB': { RefMensal: 649, Mensal: 649, Trimestral: 1947, Semestral: 3699.30, Anual: 7009.20 },
-    '600GB': { RefMensal: 699, Mensal: 699, Trimestral: 2097, Semestral: 3984.30, Anual: 7549.20 },
-    '650GB': { RefMensal: 749, Mensal: 749, Trimestral: 2247, Semestral: 4269.30, Anual: 8089.20 },
-    '700GB': { RefMensal: 799, Mensal: 799, Trimestral: 2397, Semestral: 4554.30, Anual: 8629.20 },
-    '750GB': { RefMensal: 849, Mensal: 849, Trimestral: 2547, Semestral: 4839.30, Anual: 9169.20 },
-    '800GB': { RefMensal: 899, Mensal: 899, Trimestral: 2697, Semestral: 5124.30, Anual: 9709.20 },
-    '850GB': { RefMensal: 949, Mensal: 949, Trimestral: 2847, Semestral: 5409.30, Anual: 10249.20 },
-    '900GB': { RefMensal: 999, Mensal: 999, Trimestral: 2997, Semestral: 5694.30, Anual: 10789.20 },
-    '950GB': { RefMensal: 1049, Mensal: 1049, Trimestral: 3147, Semestral: 5979.30, Anual: 11329.20 },
-    '1000GB': { RefMensal: 1099, Mensal: 1099, Trimestral: 3297, Semestral: 6264.30, Anual: 11869.20 }
+const TABELA_PRECOS: Record<
+  string,
+  {
+    RefMensal: number;
+    Mensal: number;
+    Trimestral: number;
+    Semestral: number;
+    Anual: number;
+  }
+> = {
+  "3GB": {
+    RefMensal: 69,
+    Mensal: 69,
+    Trimestral: 207,
+    Semestral: 393.3,
+    Anual: 745.2,
+  },
+  "5GB": {
+    RefMensal: 89,
+    Mensal: 89,
+    Trimestral: 267,
+    Semestral: 507.3,
+    Anual: 961.2,
+  },
+  "6GB": {
+    RefMensal: 99,
+    Mensal: 99,
+    Trimestral: 297,
+    Semestral: 564.3,
+    Anual: 1069.2,
+  },
+  "7GB": {
+    RefMensal: 109,
+    Mensal: 109,
+    Trimestral: 327,
+    Semestral: 621.3,
+    Anual: 1177.2,
+  },
+  "8GB": {
+    RefMensal: 129,
+    Mensal: 129,
+    Trimestral: 387,
+    Semestral: 735.3,
+    Anual: 1393.2,
+  },
+  "9GB": {
+    RefMensal: 139,
+    Mensal: 139,
+    Trimestral: 417,
+    Semestral: 792.3,
+    Anual: 1501.2,
+  },
+  "10GB": {
+    RefMensal: 149,
+    Mensal: 149,
+    Trimestral: 447,
+    Semestral: 849.3,
+    Anual: 1609.2,
+  },
+  "20GB": {
+    RefMensal: 159,
+    Mensal: 159,
+    Trimestral: 477,
+    Semestral: 906.3,
+    Anual: 1717.2,
+  },
+  "30GB": {
+    RefMensal: 169,
+    Mensal: 169,
+    Trimestral: 507,
+    Semestral: 963.3,
+    Anual: 1825.2,
+  },
+  "40GB": {
+    RefMensal: 179,
+    Mensal: 179,
+    Trimestral: 537,
+    Semestral: 1020.3,
+    Anual: 1933.2,
+  },
+  "50GB": {
+    RefMensal: 189,
+    Mensal: 189,
+    Trimestral: 567,
+    Semestral: 1077.3,
+    Anual: 2041.2,
+  },
+  "100GB": {
+    RefMensal: 249,
+    Mensal: 249,
+    Trimestral: 747,
+    Semestral: 1419.3,
+    Anual: 2689.2,
+  },
+  "150GB": {
+    RefMensal: 299,
+    Mensal: 299,
+    Trimestral: 897,
+    Semestral: 1704.3,
+    Anual: 3229.2,
+  },
+  "200GB": {
+    RefMensal: 379,
+    Mensal: 379,
+    Trimestral: 1137,
+    Semestral: 2160.3,
+    Anual: 4093.2,
+  },
+  "250GB": {
+    RefMensal: 399,
+    Mensal: 399,
+    Trimestral: 1197,
+    Semestral: 2274.3,
+    Anual: 4309.2,
+  },
+  "300GB": {
+    RefMensal: 449,
+    Mensal: 449,
+    Trimestral: 1347,
+    Semestral: 2559.3,
+    Anual: 4849.2,
+  },
+  "350GB": {
+    RefMensal: 479,
+    Mensal: 479,
+    Trimestral: 1437,
+    Semestral: 2730.3,
+    Anual: 5173.2,
+  },
+  "400GB": {
+    RefMensal: 499,
+    Mensal: 499,
+    Trimestral: 1497,
+    Semestral: 2844.3,
+    Anual: 5389.2,
+  },
+  "450GB": {
+    RefMensal: 549,
+    Mensal: 549,
+    Trimestral: 1647,
+    Semestral: 3129.3,
+    Anual: 5929.2,
+  },
+  "500GB": {
+    RefMensal: 599,
+    Mensal: 599,
+    Trimestral: 1797,
+    Semestral: 3414.3,
+    Anual: 6469.2,
+  },
+  "550GB": {
+    RefMensal: 649,
+    Mensal: 649,
+    Trimestral: 1947,
+    Semestral: 3699.3,
+    Anual: 7009.2,
+  },
+  "600GB": {
+    RefMensal: 699,
+    Mensal: 699,
+    Trimestral: 2097,
+    Semestral: 3984.3,
+    Anual: 7549.2,
+  },
+  "650GB": {
+    RefMensal: 749,
+    Mensal: 749,
+    Trimestral: 2247,
+    Semestral: 4269.3,
+    Anual: 8089.2,
+  },
+  "700GB": {
+    RefMensal: 799,
+    Mensal: 799,
+    Trimestral: 2397,
+    Semestral: 4554.3,
+    Anual: 8629.2,
+  },
+  "750GB": {
+    RefMensal: 849,
+    Mensal: 849,
+    Trimestral: 2547,
+    Semestral: 4839.3,
+    Anual: 9169.2,
+  },
+  "800GB": {
+    RefMensal: 899,
+    Mensal: 899,
+    Trimestral: 2697,
+    Semestral: 5124.3,
+    Anual: 9709.2,
+  },
+  "850GB": {
+    RefMensal: 949,
+    Mensal: 949,
+    Trimestral: 2847,
+    Semestral: 5409.3,
+    Anual: 10249.2,
+  },
+  "900GB": {
+    RefMensal: 999,
+    Mensal: 999,
+    Trimestral: 2997,
+    Semestral: 5694.3,
+    Anual: 10789.2,
+  },
+  "950GB": {
+    RefMensal: 1049,
+    Mensal: 1049,
+    Trimestral: 3147,
+    Semestral: 5979.3,
+    Anual: 11329.2,
+  },
+  "1000GB": {
+    RefMensal: 1099,
+    Mensal: 1099,
+    Trimestral: 3297,
+    Semestral: 6264.3,
+    Anual: 11869.2,
+  },
 };
 
 // Estado inicial limpo para resetar o formulário
 const ESTADO_INICIAL = {
-    id: '',
-    razaoSocial: '',
-    cnpj: '',
-    email: '',
-    telefone: '',
-    cidade: '',
-    uf: '',
-    dataImplantacao: '',
-    responsavel: '',
-    plano: '',
-    recorrencia: 'Mensal',
-    faturado: 'Não',
-    formaAdesao: 'Boleto bancário',
-    formaRecorrencia: 'Boleto bancário',
-    vencimentoAdesao: '2026-06-08',
-    vencimentoRecorrencia: '2026-06-08',
-    parcelasAdesao: 1,
-    parcelasRecorrencia: 1,
-    referenciaMensal: 0,
-    valorAdesao: 0,
-    valorRecorrencia: 0,
-    comissaoAdesao: 100,
-    comissaoRecorrencia: 15,
-    impostoAdesao: 29.90,
-    status: 'Rascunho'
+  id: "",
+  razaoSocial: "",
+  cnpj: "",
+  email: "",
+  telefone: "",
+  cidade: "",
+  uf: "",
+  dataImplantacao: "",
+  responsavel: "",
+  plano: "",
+  recorrencia: "Mensal",
+  faturado: "Não",
+  formaAdesao: "Boleto bancário",
+  formaRecorrencia: "Boleto bancário",
+  vencimentoAdesao: "2026-06-08",
+  vencimentoRecorrencia: "2026-06-08",
+  parcelasAdesao: 1,
+  parcelasRecorrencia: 1,
+  referenciaMensal: 0,
+  valorAdesao: 0,
+  valorRecorrencia: 0,
+  comissaoAdesao: 100,
+  comissaoRecorrencia: 15,
+  impostoAdesao: 29.9,
+  status: "Rascunho",
 };
 
 // --- FUNÇÕES AUXILIARES DE MÁSCARA (FORMATADORES) ---
 const aplicarMascaraCpfCnpj = (valor: string) => {
-    const apenasNumeros = valor.replace(/\D/g, '').slice(0, 14);
-    if (apenasNumeros.length <= 11) {
-        return apenasNumeros
-            .replace(/(\d{3})(\d)/, '$1.$2')
-            .replace(/(\d{3})(\d)/, '$1.$2')
-            .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-    } else {
-        return apenasNumeros
-            .replace(/^(\d{2})(\d)/, '$1.$2')
-            .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-            .replace(/\.(\d{3})(\d)/, '.$1/$2')
-            .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
-    }
+  const apenasNumeros = valor.replace(/\D/g, "").slice(0, 14);
+  if (apenasNumeros.length <= 11) {
+    return apenasNumeros
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  } else {
+    return apenasNumeros
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1/$2")
+      .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+  }
 };
 
 const aplicarMascaraTelefone = (valor: string) => {
-    const apenasNumeros = valor.replace(/\D/g, '').slice(0, 11);
-    if (apenasNumeros.length <= 10) {
-        return apenasNumeros
-            .replace(/^(\d{2})(\d)/g, '($1) $2')
-            .replace(/(\d{4})(\d)/, '$1-$2');
-    } else {
-        return apenasNumeros
-            .replace(/^(\d{2})(\d)/g, '($1) $2')
-            .replace(/(\d{5})(\d)/, '$1-$2');
-    }
+  const apenasNumeros = valor.replace(/\D/g, "").slice(0, 11);
+  if (apenasNumeros.length <= 10) {
+    return apenasNumeros
+      .replace(/^(\d{2})(\d)/g, "($1) $2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
+  } else {
+    return apenasNumeros
+      .replace(/^(\d{2})(\d)/g, "($1) $2")
+      .replace(/(\d{5})(\d)/, "$1-$2");
+  }
 };
 
 // --- FUNÇÕES DE VALIDAÇÃO REAL ---
 const validarEmail = (email: string) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(email);
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(email);
 };
 
 const validarCpfCnpjReal = (valor: string) => {
-    const limpo = valor.replace(/\D/g, '');
-    if (limpo.length !== 11 && limpo.length !== 14) return false;
-    if (/^(\d)\1+$/.test(limpo)) return false;
+  const limpo = valor.replace(/\D/g, "");
+  if (limpo.length !== 11 && limpo.length !== 14) return false;
+  if (/^(\d)\1+$/.test(limpo)) return false;
 
-    if (limpo.length === 11) {
-        let soma = 0, resto;
-        for (let i = 1; i <= 9; i++) soma += parseInt(limpo.substring(i - 1, i)) * (11 - i);
-        resto = (soma * 10) % 11;
-        if ((resto === 10) || (resto === 11)) resto = 0;
-        if (resto !== parseInt(limpo.substring(9, 10))) return false;
+  if (limpo.length === 11) {
+    let soma = 0,
+      resto;
+    for (let i = 1; i <= 9; i++)
+      soma += parseInt(limpo.substring(i - 1, i)) * (11 - i);
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(limpo.substring(9, 10))) return false;
 
-        soma = 0;
-        for (let i = 1; i <= 10; i++) soma += parseInt(limpo.substring(i - 1, i)) * (12 - i);
-        resto = (soma * 10) % 11;
-        if ((resto === 10) || (resto === 11)) resto = 0;
-        if (resto !== parseInt(limpo.substring(10, 11))) return false;
-        return true;
+    soma = 0;
+    for (let i = 1; i <= 10; i++)
+      soma += parseInt(limpo.substring(i - 1, i)) * (12 - i);
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(limpo.substring(10, 11))) return false;
+    return true;
+  }
+
+  if (limpo.length === 14) {
+    let tamanho = limpo.length - 2;
+    let numeros = limpo.substring(0, tamanho);
+    const digitos = limpo.substring(tamanho);
+    let soma = 0,
+      pos = tamanho - 7;
+    for (let i = tamanho; i >= 1; i--) {
+      soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+      if (pos < 2) pos = 9;
     }
+    let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+    if (resultado !== parseInt(digitos.charAt(0))) return false;
 
-    if (limpo.length === 14) {
-        let tamanho = limpo.length - 2
-        let numeros = limpo.substring(0, tamanho);
-        const digitos = limpo.substring(tamanho);
-        let soma = 0, pos = tamanho - 7;
-        for (let i = tamanho; i >= 1; i--) {
-            soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
-            if (pos < 2) pos = 9;
-        }
-        let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
-        if (resultado !== parseInt(digitos.charAt(0))) return false;
-
-        tamanho = tamanho + 1;
-        numeros = limpo.substring(0, tamanho);
-        soma = 0;
-        pos = tamanho - 7;
-        for (let i = tamanho; i >= 1; i--) {
-            soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
-            if (pos < 2) pos = 9;
-        }
-        resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
-        if (resultado !== parseInt(digitos.charAt(1))) return false;
-        return true;
+    tamanho = tamanho + 1;
+    numeros = limpo.substring(0, tamanho);
+    soma = 0;
+    pos = tamanho - 7;
+    for (let i = tamanho; i >= 1; i--) {
+      soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+      if (pos < 2) pos = 9;
     }
-    return false;
+    resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+    if (resultado !== parseInt(digitos.charAt(1))) return false;
+    return true;
+  }
+  return false;
 };
 
 export default function App() {
-    const [estados, setEstados] = useState<any[]>([]);
-    const [cidades, setCidades] = useState<string[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [currentStep, setCurrentStep] = useState(1);
-    const [formData, setFormData] = useState(ESTADO_INICIAL);
-    const [listaContratos, setListaContratos] = useState<any[]>([]);
-    const [termoPesquisa, setTermoPesquisa] = useState('');
-    
-    // NOVO: Estado para gerenciar erros de validação da Etapa 1
-    const [erros, setErros] = useState<{ cnpj?: string; email?: string; telefone?: string }>({});
+  const [estados, setEstados] = useState<any[]>([]);
+  const [cidades, setCidades] = useState<string[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState(ESTADO_INICIAL);
+  const [listaContratos, setListaContratos] = useState<any[]>([]);
+  const [termoPesquisa, setTermoPesquisa] = useState("");
 
-    //Dados IBGE
-    useEffect(() => {
-        fetch(
-            "https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome"
-        )
-            .then((res) => res.json())
-            .then((data) => setEstados(data))
-            .catch((err) => console.error("Erro ao carregar estados:", err));
-    }, []);
+  // NOVO: Estado para gerenciar erros de validação da Etapa 1
+  const [erros, setErros] = useState<{
+    cnpj?: string;
+    email?: string;
+    telefone?: string;
+  }>({});
 
-    // Atualização dinâmica inteligente de valores
-    useEffect(() => {
-        if (formData.plano && TABELA_PRECOS[formData.plano]) {
-            const dadosPlano = TABELA_PRECOS[formData.plano];
-            const refMensal = dadosPlano.RefMensal;
-            const tipoRecorrencia = formData.recorrencia as 'Mensal' | 'Trimestral' | 'Semestral' | 'Anual';
-            const valorCalculadoPeriodo = dadosPlano[tipoRecorrencia] || refMensal;
-            const calculoAdesao = dadosPlano.Anual * 0.4;
+  //Dados IBGE
+  useEffect(() => {
+    fetch(
+      "https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome",
+    )
+      .then((res) => res.json())
+      .then((data) => setEstados(data))
+      .catch((err) => console.error("Erro ao carregar estados:", err));
+  }, []);
 
-            setFormData(prev => ({
-                ...prev,
-                referenciaMensal: refMensal,
-                valorRecorrencia: valorCalculadoPeriodo,
-                valorAdesao: Number(calculoAdesao.toFixed(2))
-            }));
-        }
-    }, [formData.plano, formData.recorrencia]);
+  // Atualização dinâmica inteligente de valores
+  useEffect(() => {
+    if (formData.plano && TABELA_PRECOS[formData.plano]) {
+      const dadosPlano = TABELA_PRECOS[formData.plano];
 
-    const carregarCidades = async (uf: string) => {
-        setFormData(prev => ({
-            ...prev,
-            uf,
-            cidade: ''
-        }));
+      const refMensal = dadosPlano.RefMensal;
 
-        if (!uf) {
-            setCidades([]);
-            return;
-        }
+      const tipoRecorrencia = formData.recorrencia as
+        | "Mensal"
+        | "Trimestral"
+        | "Semestral"
+        | "Anual";
 
-        try {
-            const response = await fetch(
-                `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`
-            );
-            const data = await response.json();
+      const valorCalculadoPeriodo = dadosPlano[tipoRecorrencia] || refMensal;
 
-            setCidades(
-                data.map((cidade: any) => cidade.nome)
-            );
-        } catch (error) {
-            console.error("Erro ao carregar cidades:", error);
-        }
-    };
+      setFormData((prev) => ({
+        ...prev,
+        referenciaMensal: refMensal,
+        valorRecorrencia: valorCalculadoPeriodo,
+        valorAdesao: Number((valorCalculadoPeriodo * 0.4).toFixed(2)),
+      }));
+    }
+  }, [formData.plano, formData.recorrencia]);
 
-    // NOVO: Interceptador do botão Avançar para validar antes de mudar de etapa
-    const handleAvançarEtapa1 = () => {
-        const novosErros: typeof erros = {};
+  const carregarCidades = async (uf: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      uf,
+      cidade: "",
+    }));
 
-        if (!validarCpfCnpjReal(formData.cnpj)) {
-            novosErros.cnpj = "CPF ou CNPJ inválido. Verifique os números.";
-        }
-        if (!validarEmail(formData.email)) {
-            novosErros.email = "E-mail inválido. Utilize o formato nome@dominio.com";
-        }
-        if (formData.telefone.replace(/\D/g, '').length < 10) {
-            novosErros.telefone = "Telefone incompleto. Digite o DDD + número.";
-        }
+    if (!uf) {
+      setCidades([]);
+      return;
+    }
 
-        setErros(novosErros);
+    try {
+      const response = await fetch(
+        `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`,
+      );
+      const data = await response.json();
 
-        if (Object.keys(novosErros).length === 0) {
-            setCurrentStep(2);
-        }
-    };
+      setCidades(data.map((cidade: any) => cidade.nome));
+    } catch (error) {
+      console.error("Erro ao carregar cidades:", error);
+    }
+  };
 
-    // 1. AÇÃO DE CANCELAR / SAIR
-    const handleCancelarSair = () => {
-        const confirmar = window.confirm("Atenção: Ao sair, todas as alterações não salvas deste formulário serão perdidas. Deseja continuar?");
-        if (confirmar) {
-            setIsModalOpen(false);
-            setFormData(ESTADO_INICIAL);
-            setErros({}); // Limpa erros ao sair
-            setCurrentStep(1);
-        }
-    };
+  // NOVO: Interceptador do botão Avançar para validar antes de mudar de etapa
+  const handleAvançarEtapa1 = () => {
+    const novosErros: typeof erros = {};
 
-    // 2. AÇÃO DE SALVAR RASCUNHO (Permite pesquisar e editar depois)
-    const handleSalvarRascunho = () => {
-        let contratoSalvo = { ...formData };
-        if (!contratoSalvo.id) {
-            contratoSalvo.id = Math.random().toString(36).substr(2, 9);
-            contratoSalvo.status = 'Rascunho';
-            setListaContratos([...listaContratos, contratoSalvo]);
-        } else {
-            setListaContratos(listaContratos.map(c => c.id === contratoSalvo.id ? contratoSalvo : c));
-        }
+    if (!validarCpfCnpjReal(formData.cnpj)) {
+      novosErros.cnpj = "CPF ou CNPJ inválido. Verifique os números.";
+    }
+    if (!validarEmail(formData.email)) {
+      novosErros.email = "E-mail inválido. Utilize o formato nome@dominio.com";
+    }
+    if (formData.telefone.replace(/\D/g, "").length < 10) {
+      novosErros.telefone = "Telefone incompleto. Digite o DDD + número.";
+    }
 
-        alert(`Rascunho de ${contratoSalvo.razaoSocial} salvo com sucesso! Você pode editá-lo na listagem.`);
-        setIsModalOpen(false);
-        setFormData(ESTADO_INICIAL);
-        setErros({});
-        setCurrentStep(1);
-    };
+    setErros(novosErros);
 
-    // 3. AÇÃO DE CONCLUIR CONTRATO
-    const finalizarVendaCompleta = () => {
-        let contratoConcluido = { ...formData, status: 'Concluído' };
-        if (!contratoConcluido.id) {
-            contratoConcluido.id = Math.random().toString(36).substr(2, 9);
-            setListaContratos([...listaContratos, contratoConcluido]);
-        } else {
-            setListaContratos(listaContratos.map(c => c.id === contratoConcluido.id ? contratoConcluido : c));
-        }
+    if (Object.keys(novosErros).length === 0) {
+      setCurrentStep(2);
+    }
+  };
 
-        alert(`Contrato de ${contratoConcluido.razaoSocial} CONCLUÍDO e finalizado com sucesso!`);
-        setIsModalOpen(false);
-        setFormData(ESTADO_INICIAL);
-        setErros({});
-        setCurrentStep(1);
-    };
+  // 1. AÇÃO DE CANCELAR / SAIR
+  const handleCancelarSair = () => {
+    const confirmar = window.confirm(
+      "Atenção: Ao sair, todas as alterações não salvas deste formulário serão perdidas. Deseja continuar?",
+    );
+    if (confirmar) {
+      setIsModalOpen(false);
+      setFormData(ESTADO_INICIAL);
+      setErros({}); // Limpa erros ao sair
+      setCurrentStep(1);
+    }
+  };
 
-    // 4. FUNÇÃO PARA ABRIR CONTRATO PARA EDIÇÃO
-    const handleEditarContrato = async (contrato: any) => {
-        setFormData(contrato);
-        setErros({});
-        if (contrato.uf) {
-            try {
-                const response = await fetch(
-                    `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${contrato.uf}/municipios`
-                );
-                const data = await response.json();
+  // 2. AÇÃO DE SALVAR RASCUNHO (Permite pesquisar e editar depois)
+  const handleSalvarRascunho = () => {
+    let contratoSalvo = { ...formData };
+    if (!contratoSalvo.id) {
+      contratoSalvo.id = Math.random().toString(36).substr(2, 9);
+      contratoSalvo.status = "Rascunho";
+      setListaContratos([...listaContratos, contratoSalvo]);
+    } else {
+      setListaContratos(
+        listaContratos.map((c) =>
+          c.id === contratoSalvo.id ? contratoSalvo : c,
+        ),
+      );
+    }
 
-                setCidades(
-                    data.map((cidade: any) => cidade.nome)
-                );
-            } catch (error) {
-                console.error("Erro ao carregar cidades:", error);
-            }
-        }
+    alert(
+      `Rascunho de ${contratoSalvo.razaoSocial} salvo com sucesso! Você pode editá-lo na listagem.`,
+    );
+    setIsModalOpen(false);
+    setFormData(ESTADO_INICIAL);
+    setErros({});
+    setCurrentStep(1);
+  };
 
-        setCurrentStep(1);
-        setIsModalOpen(true);
-    };
+  // 3. AÇÃO DE CONCLUIR CONTRATO
+  const finalizarVendaCompleta = () => {
+    let contratoConcluido = { ...formData, status: "Concluído" };
+    if (!contratoConcluido.id) {
+      contratoConcluido.id = Math.random().toString(36).substr(2, 9);
+      setListaContratos([...listaContratos, contratoConcluido]);
+    } else {
+      setListaContratos(
+        listaContratos.map((c) =>
+          c.id === contratoConcluido.id ? contratoConcluido : c,
+        ),
+      );
+    }
 
-    // 5. EMISSÃO DO ORÇAMENTO EM PDF
-    const handleGerarPDF = (contratoParaPdf: any) => {
-        const totalProposta = contratoParaPdf.valorRecorrencia + contratoParaPdf.valorAdesao;
-        const dataHoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+    alert(
+      `Contrato de ${contratoConcluido.razaoSocial} CONCLUÍDO e finalizado com sucesso!`,
+    );
+    setIsModalOpen(false);
+    setFormData(ESTADO_INICIAL);
+    setErros({});
+    setCurrentStep(1);
+  };
 
-        const janelaImpressao = window.open('', '_blank');
-        if (janelaImpressao) {
-            janelaImpressao.document.write(`
+  // 4. FUNÇÃO PARA ABRIR CONTRATO PARA EDIÇÃO
+  const handleEditarContrato = async (contrato: any) => {
+    setFormData(contrato);
+    setErros({});
+    if (contrato.uf) {
+      try {
+        const response = await fetch(
+          `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${contrato.uf}/municipios`,
+        );
+        const data = await response.json();
+
+        setCidades(data.map((cidade: any) => cidade.nome));
+      } catch (error) {
+        console.error("Erro ao carregar cidades:", error);
+      }
+    }
+
+    setCurrentStep(1);
+    setIsModalOpen(true);
+  };
+
+  // 5. EMISSÃO DO ORÇAMENTO EM PDF
+  const handleGerarPDF = (contratoParaPdf: any) => {
+    const totalProposta =
+      contratoParaPdf.valorRecorrencia + contratoParaPdf.valorAdesao;
+    const dataHoje = new Date().toLocaleDateString("pt-BR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    const janelaImpressao = window.open("", "_blank");
+    if (janelaImpressao) {
+      janelaImpressao.document.write(`
                 <html>
                 <head>
                     <title>Orçamento Comercial Nº ${Math.floor(Math.random() * 200) + 100}</title>
@@ -338,11 +556,11 @@ export default function App() {
 
                     <div class="section-title">Dados do cliente</div>
                     <div class="grid-dados">
-                        <div class="label">Cliente:</div><div class="value">${contratoParaPdf.razaoSocial || '-------------------------'}</div>
-                        <div class="label">CNPJ / CPF:</div><div class="value">${contratoParaPdf.cnpj || '-------------------------'}</div>
-                        <div class="label">Endereço:</div><div class="value">${contratoParaPdf.cidade} - ${contratoParaPdf.uf || '-------------------------'}</div>
-                        <div class="label">Telefone:</div><div class="value">${contratoParaPdf.telefone || '-------------------------'}</div>
-                        <div class="label">E-mail:</div><div class="value">${contratoParaPdf.email || '-------------------------'}</div>
+                        <div class="label">Cliente:</div><div class="value">${contratoParaPdf.razaoSocial || "-------------------------"}</div>
+                        <div class="label">CNPJ / CPF:</div><div class="value">${contratoParaPdf.cnpj || "-------------------------"}</div>
+                        <div class="label">Endereço:</div><div class="value">${contratoParaPdf.cidade} - ${contratoParaPdf.uf || "-------------------------"}</div>
+                        <div class="label">Telefone:</div><div class="value">${contratoParaPdf.telefone || "-------------------------"}</div>
+                        <div class="label">E-mail:</div><div class="value">${contratoParaPdf.email || "-------------------------"}</div>
                     </div>
 
                     <div class="section-title">Dados do fornecedor</div>
@@ -395,308 +613,664 @@ export default function App() {
                 </body>
                 </html>
             `);
-            janelaImpressao.document.close();
-        }
-    };
+      janelaImpressao.document.close();
+    }
+  };
 
-    const contratosFiltrados = listaContratos.filter(c =>
-        c.razaoSocial.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
-        c.cnpj.includes(termoPesquisa)
-    );
+  const contratosFiltrados = listaContratos.filter(
+    (c) =>
+      c.razaoSocial.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
+      c.cnpj.includes(termoPesquisa),
+  );
 
-    return (
-        <div className="flex h-screen bg-slate-50 text-slate-800 font-sans">
-            {/* MENU LATERAL */}
-            <aside className="w-64 bg-white border-r border-slate-200 p-4 space-y-6">
-                <div className="text-xl font-bold border-b border-slate-100 pb-4 text-slate-900">Prociber Painel</div>
-                <nav className="space-y-2">
-                    <button className="w-full text-left p-2 hover:bg-slate-100 rounded text-sm font-medium">Dashboard</button>
-                    <button className="w-full text-left p-2 bg-blue-50 text-blue-600 rounded text-sm font-semibold">Clientes e Vendas</button>
-                </nav>
-            </aside>
-
-            {/* CONTEÚDO PRINCIPAL */}
-            <main className="flex-1 p-8 overflow-y-auto">
-                <header className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold text-slate-900">Gestão de Contratos</h1>
-                    <button
-                        onClick={() => { setFormData(ESTADO_INICIAL); setErros({}); setCurrentStep(1); setIsModalOpen(true); }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
-                    >
-                        + Novo Contrato
-                    </button>
-                </header>
-
-                <div className="mb-6">
-                    <input
-                        type="text"
-                        placeholder="Pesquisar cliente por nome ou CNPJ para editar valores..."
-                        className="w-full max-w-md bg-white border border-slate-300 rounded-lg p-2 text-sm"
-                        value={termoPesquisa}
-                        onChange={e => setTermoPesquisa(e.target.value)}
-                    />
-                </div>
-
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-xs uppercase">
-                            <tr>
-                                <th className="p-4">Cliente</th>
-                                <th className="p-4">Plano</th>
-                                <th className="p-4">Valor Total</th>
-                                <th className="p-4">Status</th>
-                                <th className="p-4 text-center">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {contratosFiltrados.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="p-8 text-center text-slate-400 text-sm">Nenhum contrato ou rascunho encontrado.</td>
-                                </tr>
-                            ) : (
-                                contratosFiltrados.map((contrato) => (
-                                    <tr key={contrato.id} className="hover:bg-slate-50/80">
-                                        <td className="p-4 font-medium text-slate-900">{contrato.razaoSocial}</td>
-                                        <td className="p-4">{contrato.plano} ({contrato.recorrencia})</td>
-                                        <td className="p-4">R$ {(contrato.valorRecorrencia + contrato.valorAdesao).toFixed(2)}</td>
-                                        <td className="p-4">
-                                            <span className={`px-2 py-1 rounded text-xs font-semibold ${contrato.status === 'Concluído' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                                {contrato.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 text-center">
-                                            <div className="flex items-center justify-center space-x-3">
-                                                <button onClick={() => handleEditarContrato(contrato)} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Editar Valores">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
-                                                </button>
-                                                <button onClick={() => handleGerarPDF(contrato)} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Gerar PDF">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* MODAL PRINCIPAL */}
-                {isModalOpen && (
-                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                        <div className="bg-white border border-slate-200 rounded-xl max-w-3xl w-full p-6 space-y-6 max-h-[95vh] overflow-y-auto shadow-xl">
-
-                            {/* Indicador de Etapas */}
-                            <div className="flex justify-between border-b border-slate-100 pb-4 text-xs font-semibold tracking-wide">
-                                <span className={currentStep === 1 ? "text-blue-600 border-b-2 border-blue-600 pb-4 -mb-[18px]" : "text-slate-400"}>1. CLIENTE</span>
-                                <span className={currentStep === 2 ? "text-blue-600 border-b-2 border-blue-600 pb-4 -mb-[18px]" : "text-slate-400"}>2. PRODUTO</span>
-                                <span className={currentStep === 3 ? "text-blue-600 border-b-2 border-blue-600 pb-4 -mb-[18px]" : "text-slate-400"}>3. FINANCEIRO & COMISSÕES</span>
-                            </div>
-
-                            {/* ETAPA 1: CLIENTE */}
-                            {currentStep === 1 && (
-                                <div className="space-y-4 pt-2">
-                                    <h3 className="text-base font-bold text-slate-900">Dados Básicos do Cliente</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1">Razão Social / Nome *</label>
-                                            <input type="text" className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.razaoSocial} onChange={e => setFormData({ ...formData, razaoSocial: e.target.value })} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1">CNPJ / CPF *</label>
-                                            <input 
-                                                type="text" 
-                                                placeholder="00.000.000/0001-00 ou 000.000.000-00"
-                                                className={`w-full bg-slate-50 border rounded p-2 text-sm text-slate-800 ${erros.cnpj ? 'border-red-500 bg-red-50' : 'border-slate-300'}`} 
-                                                value={formData.cnpj} 
-                                                onChange={e => setFormData({ ...formData, cnpj: aplicarMascaraCpfCnpj(e.target.value) })} 
-                                            />
-                                            {erros.cnpj && <p className="text-red-500 text-xs mt-1 font-medium">{erros.cnpj}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1">E-mail *</label>
-                                            <input 
-                                                type="email" 
-                                                placeholder="exemplo@prociber.com.br"
-                                                className={`w-full bg-slate-50 border rounded p-2 text-sm text-slate-800 ${erros.email ? 'border-red-500 bg-red-50' : 'border-slate-300'}`} 
-                                                value={formData.email} 
-                                                onChange={e => setFormData({ ...formData, email: e.target.value })} 
-                                            />
-                                            {erros.email && <p className="text-red-500 text-xs mt-1 font-medium">{erros.email}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1">Telefone / Celular *</label>
-                                            <input 
-                                                type="text" 
-                                                placeholder="(45) 99999-0000" 
-                                                className={`w-full bg-slate-50 border rounded p-2 text-sm text-slate-800 ${erros.telefone ? 'border-red-500 bg-red-50' : 'border-slate-300'}`} 
-                                                value={formData.telefone} 
-                                                onChange={e => setFormData({ ...formData, telefone: aplicarMascaraTelefone(e.target.value) })} 
-                                            />
-                                            {erros.telefone && <p className="text-red-500 text-xs mt-1 font-medium">{erros.telefone}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1">Estado (UF) *</label>
-                                            <select className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.uf} onChange={e => carregarCidades(e.target.value)}>
-                                                <option value="">Selecione a UF...</option>
-                                                {estados.map((estado) => (<option key={estado.id} value={estado.sigla} > {estado.nome} </option>))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1">Cidade *</label>
-                                            <select className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.cidade} disabled={!formData.uf} onChange={e => setFormData({ ...formData, cidade: e.target.value })}>
-                                                <option value="">Selecione a cidade...</option>
-                                                {cidades.map((cidade) => (<option key={cidade} value={cidade} > {cidade} </option>))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-between pt-4 border-t border-slate-100">
-                                        <button onClick={handleCancelarSair} className="text-red-500 hover:text-red-700 text-sm font-medium">Cancelar</button>
-                                        <button 
-                                            onClick={handleAvançarEtapa1} 
-                                            disabled={!formData.razaoSocial || !formData.cnpj || !formData.cidade} 
-                                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded text-sm shadow-sm"
-                                        >
-                                            Avançar para Venda →
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ETAPA 2: PRODUTO */}
-                            {currentStep === 2 && (
-                                <div className="space-y-6 pt-2">
-                                    <div>
-                                        <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-1 mb-3">IMPLANTAÇÃO</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Previsão de implantação *</label>
-                                                <input type="date" className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.dataImplantacao} onChange={(e) => setFormData({ ...formData, dataImplantacao: e.target.value })} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Responsável pela implantação *</label>
-                                                <input type="text" className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.responsavel} onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })} />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-1 mb-3">PRODUTO: BACKUP DADOS</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Plano *</label>
-                                                <select className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.plano} onChange={e => setFormData({ ...formData, plano: e.target.value })}>
-                                                    <option value="">Selecione um plano...</option>
-                                                    {Object.keys(TABELA_PRECOS).map(p => <option key={p} value={p}>{p}</option>)}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Recorrência *</label>
-                                                <select className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.recorrencia} onChange={e => setFormData({ ...formData, recorrencia: e.target.value })}>
-                                                    <option value="Mensal">Mensal</option>
-                                                    <option value="Trimestral">Trimestral</option>
-                                                    <option value="Semestral">Semestral</option>
-                                                    <option value="Anual">Anual</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex justify-between pt-4 border-t border-slate-100">
-                                        <button onClick={handleCancelarSair} className="text-red-500 hover:text-red-700 text-sm font-medium">Cancelar</button>
-                                        <div className="space-x-2">
-                                            <button onClick={() => setCurrentStep(1)} className="text-slate-500 hover:text-slate-800 text-sm font-medium px-4">Voltar</button>
-                                            <button onClick={() => setCurrentStep(3)} disabled={!formData.dataImplantacao || !formData.plano} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded text-sm shadow-sm">Próximo</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ETAPA 3: FINANCEIRO & COMISSÕES */}
-                            {currentStep === 3 && (
-                                <div className="space-y-6 pt-2">
-                                    <div className="bg-blue-50/70 border border-blue-100 p-3 rounded-lg text-xs text-blue-800 flex justify-between items-center">
-                                        <div><strong>Plano Ativo:</strong> {formData.plano} ({formData.recorrencia})</div>
-                                        <div><strong>Ref. Mensal Base:</strong> R$ {formData.referenciaMensal.toFixed(2)}</div>
-                                    </div>
-
-                                    {/* CONFIGURAÇÃO DE PAGAMENTO */}
-                                    <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
-                                        <h4 className="text-sm font-bold text-slate-900 tracking-wide uppercase border-b pb-2 text-blue-600">Configurações de Faturamento</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Faturado *</label>
-                                                <select className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.faturado} onChange={e => setFormData({ ...formData, faturado: e.target.value })}>
-                                                    <option value="Sim">Sim</option>
-                                                    <option value="Não">Não</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Forma de Pagamento - Adesão *</label>
-                                                <input type="text" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.formaAdesao} onChange={e => setFormData({ ...formData, formaAdesao: e.target.value })} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Primeiro Vencimento da Adesão</label>
-                                                <input type="date" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.vencimentoAdesao} onChange={e => setFormData({ ...formData, vencimentoAdesao: e.target.value })} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Forma de Pagamento - Recorrência *</label>
-                                                <input type="text" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.formaRecorrencia} onChange={e => setFormData({ ...formData, formaRecorrencia: e.target.value })} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Primeiro Vencimento da Recorrência</label>
-                                                <input type="date" className="w-full bg-white border border-slate-300 rounded p-2 text-sm" value={formData.vencimentoRecorrencia} onChange={e => setFormData({ ...formData, vencimentoRecorrencia: e.target.value })} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Recorrência do Pagamento *</label>
-                                                <input type="text" className="w-full bg-slate-100 border border-slate-300 rounded p-2 text-sm font-semibold" value={formData.recorrencia} readOnly />
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Referência Mensal (R$)</label>
-                                                <input type="number" className="w-full bg-slate-100 border border-slate-300 rounded p-2 text-sm font-medium" value={formData.referenciaMensal} readOnly />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-700 mb-1">Valor de Adesão / Implantação (R$) *</label>
-                                                <input type="number" step="0.01" className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold" value={formData.valorAdesao} onChange={e => setFormData({ ...formData, valorAdesao: Number(e.target.value) })} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-700 mb-1">Valor de Recorrência (R$) *</label>
-                                                <input type="number" step="0.01" className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold" value={formData.valorRecorrencia} onChange={e => setFormData({ ...formData, valorRecorrencia: Number(e.target.value), valorAdesao: Number((Number(e.target.value) * 0.4).toFixed(2)) })} />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* CONTROLES E BOTÕES */}
-                                    <div className="flex justify-between pt-4 border-t border-slate-100 items-center">
-                                        <button onClick={handleCancelarSair} className="text-red-500 hover:text-red-700 text-sm font-medium">
-                                            Cancelar
-                                        </button>
-
-                                        <div className="flex space-x-2">
-                                            <button onClick={() => setCurrentStep(2)} className="text-slate-500 hover:text-slate-800 text-sm font-medium px-3">
-                                                Voltar
-                                            </button>
-                                            <button onClick={() => handleGerarPDF(formData)} className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded text-sm shadow-sm">
-                                                Emitir PDF 📄
-                                            </button>
-                                            <button onClick={handleSalvarRascunho} className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded text-sm shadow-sm">
-                                                Salvar Rascunho 💾
-                                            </button>
-                                            <button onClick={finalizarVendaCompleta} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded text-sm shadow-sm">
-                                                Concluir ✓
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                        </div>
-                    </div>
-                )}
-            </main>
+  return (
+    <div className="flex h-screen bg-slate-50 text-slate-800 font-sans">
+      {/* MENU LATERAL */}
+      <aside className="w-64 bg-white border-r border-slate-200 p-4 space-y-6">
+        <div className="text-xl font-bold border-b border-slate-100 pb-4 text-slate-900">
+          Prociber Painel
         </div>
-    );
+        <nav className="space-y-2">
+          <button className="w-full text-left p-2 hover:bg-slate-100 rounded text-sm font-medium">
+            Dashboard
+          </button>
+          <button className="w-full text-left p-2 bg-blue-50 text-blue-600 rounded text-sm font-semibold">
+            Clientes e Vendas
+          </button>
+        </nav>
+      </aside>
+
+      {/* CONTEÚDO PRINCIPAL */}
+      <main className="flex-1 p-8 overflow-y-auto">
+        <header className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">
+            Gestão de Contratos
+          </h1>
+          <button
+            onClick={() => {
+              setFormData(ESTADO_INICIAL);
+              setErros({});
+              setCurrentStep(1);
+              setIsModalOpen(true);
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
+          >
+            + Novo Contrato
+          </button>
+        </header>
+
+        <div className="mb-6">
+          <input
+            type="text"
+            placeholder="Pesquisar cliente por nome ou CNPJ para editar valores..."
+            className="w-full max-w-md bg-white border border-slate-300 rounded-lg p-2 text-sm"
+            value={termoPesquisa}
+            onChange={(e) => setTermoPesquisa(e.target.value)}
+          />
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-xs uppercase">
+              <tr>
+                <th className="p-4">Cliente</th>
+                <th className="p-4">Plano</th>
+                <th className="p-4">Valor Total</th>
+                <th className="p-4">Status</th>
+                <th className="p-4 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {contratosFiltrados.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="p-8 text-center text-slate-400 text-sm"
+                  >
+                    Nenhum contrato ou rascunho encontrado.
+                  </td>
+                </tr>
+              ) : (
+                contratosFiltrados.map((contrato) => (
+                  <tr key={contrato.id} className="hover:bg-slate-50/80">
+                    <td className="p-4 font-medium text-slate-900">
+                      {contrato.razaoSocial}
+                    </td>
+                    <td className="p-4">
+                      {contrato.plano} ({contrato.recorrencia})
+                    </td>
+                    <td className="p-4">
+                      R${" "}
+                      {(
+                        contrato.valorRecorrencia + contrato.valorAdesao
+                      ).toFixed(2)}
+                    </td>
+                    <td className="p-4">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-semibold ${contrato.status === "Concluído" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
+                      >
+                        {contrato.status}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <div className="flex items-center justify-center space-x-3">
+                        <button
+                          onClick={() => handleEditarContrato(contrato)}
+                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="Editar Valores"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                            stroke="currentColor"
+                            className="w-4 h-4"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleGerarPDF(contrato)}
+                          className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Gerar PDF"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                            stroke="currentColor"
+                            className="w-4 h-4"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* MODAL PRINCIPAL */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white border border-slate-200 rounded-xl max-w-3xl w-full p-6 space-y-6 max-h-[95vh] overflow-y-auto shadow-xl">
+              {/* Indicador de Etapas */}
+              <div className="flex justify-between border-b border-slate-100 pb-4 text-xs font-semibold tracking-wide">
+                <span
+                  className={
+                    currentStep === 1
+                      ? "text-blue-600 border-b-2 border-blue-600 pb-4 -mb-[18px]"
+                      : "text-slate-400"
+                  }
+                >
+                  1. CLIENTE
+                </span>
+                <span
+                  className={
+                    currentStep === 2
+                      ? "text-blue-600 border-b-2 border-blue-600 pb-4 -mb-[18px]"
+                      : "text-slate-400"
+                  }
+                >
+                  2. PRODUTO
+                </span>
+                <span
+                  className={
+                    currentStep === 3
+                      ? "text-blue-600 border-b-2 border-blue-600 pb-4 -mb-[18px]"
+                      : "text-slate-400"
+                  }
+                >
+                  3. FINANCEIRO & COMISSÕES
+                </span>
+              </div>
+
+              {/* ETAPA 1: CLIENTE */}
+              {currentStep === 1 && (
+                <div className="space-y-4 pt-2">
+                  <h3 className="text-base font-bold text-slate-900">
+                    Dados Básicos do Cliente
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Razão Social / Nome *
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                        value={formData.razaoSocial}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            razaoSocial: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        CNPJ / CPF *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="00.000.000/0001-00 ou 000.000.000-00"
+                        className={`w-full bg-slate-50 border rounded p-2 text-sm text-slate-800 ${erros.cnpj ? "border-red-500 bg-red-50" : "border-slate-300"}`}
+                        value={formData.cnpj}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            cnpj: aplicarMascaraCpfCnpj(e.target.value),
+                          })
+                        }
+                      />
+                      {erros.cnpj && (
+                        <p className="text-red-500 text-xs mt-1 font-medium">
+                          {erros.cnpj}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        E-mail *
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="exemplo@prociber.com.br"
+                        className={`w-full bg-slate-50 border rounded p-2 text-sm text-slate-800 ${erros.email ? "border-red-500 bg-red-50" : "border-slate-300"}`}
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                      />
+                      {erros.email && (
+                        <p className="text-red-500 text-xs mt-1 font-medium">
+                          {erros.email}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Telefone / Celular *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="(45) 99999-0000"
+                        className={`w-full bg-slate-50 border rounded p-2 text-sm text-slate-800 ${erros.telefone ? "border-red-500 bg-red-50" : "border-slate-300"}`}
+                        value={formData.telefone}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            telefone: aplicarMascaraTelefone(e.target.value),
+                          })
+                        }
+                      />
+                      {erros.telefone && (
+                        <p className="text-red-500 text-xs mt-1 font-medium">
+                          {erros.telefone}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Estado (UF) *
+                      </label>
+                      <select
+                        className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                        value={formData.uf}
+                        onChange={(e) => carregarCidades(e.target.value)}
+                      >
+                        <option value="">Selecione a UF...</option>
+                        {estados.map((estado) => (
+                          <option key={estado.id} value={estado.sigla}>
+                            {" "}
+                            {estado.nome}{" "}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Cidade *
+                      </label>
+                      <select
+                        className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                        value={formData.cidade}
+                        disabled={!formData.uf}
+                        onChange={(e) =>
+                          setFormData({ ...formData, cidade: e.target.value })
+                        }
+                      >
+                        <option value="">Selecione a cidade...</option>
+                        {cidades.map((cidade) => (
+                          <option key={cidade} value={cidade}>
+                            {" "}
+                            {cidade}{" "}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex justify-between pt-4 border-t border-slate-100">
+                    <button
+                      onClick={handleCancelarSair}
+                      className="text-red-500 hover:text-red-700 text-sm font-medium"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleAvançarEtapa1}
+                      disabled={
+                        !formData.razaoSocial ||
+                        !formData.cnpj ||
+                        !formData.cidade
+                      }
+                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded text-sm shadow-sm"
+                    >
+                      Avançar para Venda →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ETAPA 2: PRODUTO */}
+              {currentStep === 2 && (
+                <div className="space-y-6 pt-2">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-1 mb-3">
+                      IMPLANTAÇÃO
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Previsão de implantação *
+                        </label>
+                        <input
+                          type="date"
+                          className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                          value={formData.dataImplantacao}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              dataImplantacao: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Responsável pela implantação *
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                          value={formData.responsavel}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              responsavel: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-1 mb-3">
+                      PRODUTO: BACKUP DADOS
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Plano *
+                        </label>
+                        <select
+                          className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                          value={formData.plano}
+                          onChange={(e) =>
+                            setFormData({ ...formData, plano: e.target.value })
+                          }
+                        >
+                          <option value="">Selecione um plano...</option>
+                          {Object.keys(TABELA_PRECOS).map((p) => (
+                            <option key={p} value={p}>
+                              {p}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Recorrência *
+                        </label>
+                        <select
+                          className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800"
+                          value={formData.recorrencia}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              recorrencia: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="Mensal">Mensal</option>
+                          <option value="Trimestral">Trimestral</option>
+                          <option value="Semestral">Semestral</option>
+                          <option value="Anual">Anual</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between pt-4 border-t border-slate-100">
+                    <button
+                      onClick={handleCancelarSair}
+                      className="text-red-500 hover:text-red-700 text-sm font-medium"
+                    >
+                      Cancelar
+                    </button>
+                    <div className="space-x-2">
+                      <button
+                        onClick={() => setCurrentStep(1)}
+                        className="text-slate-500 hover:text-slate-800 text-sm font-medium px-4"
+                      >
+                        Voltar
+                      </button>
+                      <button
+                        onClick={() => setCurrentStep(3)}
+                        disabled={!formData.dataImplantacao || !formData.plano}
+                        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded text-sm shadow-sm"
+                      >
+                        Próximo
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ETAPA 3: FINANCEIRO & COMISSÕES */}
+              {currentStep === 3 && (
+                <div className="space-y-6 pt-2">
+                  <div className="bg-blue-50/70 border border-blue-100 p-3 rounded-lg text-xs text-blue-800 flex justify-between items-center">
+                    <div>
+                      <strong>Plano Ativo:</strong> {formData.plano} (
+                      {formData.recorrencia})
+                    </div>
+                    <div>
+                      <strong>Ref. Mensal Base:</strong> R${" "}
+                      {formData.referenciaMensal.toFixed(2)}
+                    </div>
+                  </div>
+
+                  {/* CONFIGURAÇÃO DE PAGAMENTO */}
+                  <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+                    <h4 className="text-sm font-bold text-slate-900 tracking-wide uppercase border-b pb-2 text-blue-600">
+                      Configurações de Faturamento
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Faturado *
+                        </label>
+                        <select
+                          className="w-full bg-white border border-slate-300 rounded p-2 text-sm"
+                          value={formData.faturado}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              faturado: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="Sim">Sim</option>
+                          <option value="Não">Não</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Forma de Pagamento - Adesão *
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full bg-white border border-slate-300 rounded p-2 text-sm"
+                          value={formData.formaAdesao}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              formaAdesao: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Primeiro Vencimento da Adesão
+                        </label>
+                        <input
+                          type="date"
+                          className="w-full bg-white border border-slate-300 rounded p-2 text-sm"
+                          value={formData.vencimentoAdesao}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              vencimentoAdesao: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Forma de Pagamento - Recorrência *
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full bg-white border border-slate-300 rounded p-2 text-sm"
+                          value={formData.formaRecorrencia}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              formaRecorrencia: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Primeiro Vencimento da Recorrência
+                        </label>
+                        <input
+                          type="date"
+                          className="w-full bg-white border border-slate-300 rounded p-2 text-sm"
+                          value={formData.vencimentoRecorrencia}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              vencimentoRecorrencia: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Recorrência do Pagamento *
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full bg-slate-100 border border-slate-300 rounded p-2 text-sm font-semibold"
+                          value={formData.recorrencia}
+                          readOnly
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Referência Mensal (R$)
+                        </label>
+                        <input
+                          type="number"
+                          className="w-full bg-slate-100 border border-slate-300 rounded p-2 text-sm font-medium"
+                          value={formData.referenciaMensal}
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Valor de Adesão / Implantação (R$) *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold"
+                          value={formData.valorAdesao}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              valorAdesao: Number(e.target.value),
+                            })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Valor de Recorrência (R$) *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold"
+                          value={formData.valorRecorrencia}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              valorRecorrencia: Number(e.target.value),
+                              valorAdesao: Number(
+                                (Number(e.target.value) * 0.4).toFixed(2),
+                              ),
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CONTROLES E BOTÕES */}
+                  <div className="flex justify-between pt-4 border-t border-slate-100 items-center">
+                    <button
+                      onClick={handleCancelarSair}
+                      className="text-red-500 hover:text-red-700 text-sm font-medium"
+                    >
+                      Cancelar
+                    </button>
+
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => setCurrentStep(2)}
+                        className="text-slate-500 hover:text-slate-800 text-sm font-medium px-3"
+                      >
+                        Voltar
+                      </button>
+                      <button
+                        onClick={() => handleGerarPDF(formData)}
+                        className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded text-sm shadow-sm"
+                      >
+                        Emitir PDF 📄
+                      </button>
+                      <button
+                        onClick={handleSalvarRascunho}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded text-sm shadow-sm"
+                      >
+                        Salvar Rascunho 💾
+                      </button>
+                      <button
+                        onClick={finalizarVendaCompleta}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded text-sm shadow-sm"
+                      >
+                        Concluir ✓
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
 }
