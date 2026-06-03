@@ -60,16 +60,103 @@ const ESTADO_INICIAL = {
     comissaoAdesao: 100,
     comissaoRecorrencia: 15,
     impostoAdesao: 29.90,
-    status: 'Rascunho' // 'Rascunho' ou 'Concluído'
+    status: 'Rascunho'
+};
+
+// --- FUNÇÕES AUXILIARES DE MÁSCARA (FORMATADORES) ---
+const aplicarMascaraCpfCnpj = (valor: string) => {
+    const apenasNumeros = valor.replace(/\D/g, '').slice(0, 14);
+    if (apenasNumeros.length <= 11) {
+        return apenasNumeros
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    } else {
+        return apenasNumeros
+            .replace(/^(\d{2})(\d)/, '$1.$2')
+            .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+            .replace(/\.(\d{3})(\d)/, '.$1/$2')
+            .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+    }
+};
+
+const aplicarMascaraTelefone = (valor: string) => {
+    const apenasNumeros = valor.replace(/\D/g, '').slice(0, 11);
+    if (apenasNumeros.length <= 10) {
+        return apenasNumeros
+            .replace(/^(\d{2})(\d)/g, '($1) $2')
+            .replace(/(\d{4})(\d)/, '$1-$2');
+    } else {
+        return apenasNumeros
+            .replace(/^(\d{2})(\d)/g, '($1) $2')
+            .replace(/(\d{5})(\d)/, '$1-$2');
+    }
+};
+
+// --- FUNÇÕES DE VALIDAÇÃO REAL ---
+const validarEmail = (email: string) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+};
+
+const validarCpfCnpjReal = (valor: string) => {
+    const limpo = valor.replace(/\D/g, '');
+    if (limpo.length !== 11 && limpo.length !== 14) return false;
+    if (/^(\d)\1+$/.test(limpo)) return false;
+
+    if (limpo.length === 11) {
+        let soma = 0, resto;
+        for (let i = 1; i <= 9; i++) soma += parseInt(limpo.substring(i - 1, i)) * (11 - i);
+        resto = (soma * 10) % 11;
+        if ((resto === 10) || (resto === 11)) resto = 0;
+        if (resto !== parseInt(limpo.substring(9, 10))) return false;
+
+        soma = 0;
+        for (let i = 1; i <= 10; i++) soma += parseInt(limpo.substring(i - 1, i)) * (12 - i);
+        resto = (soma * 10) % 11;
+        if ((resto === 10) || (resto === 11)) resto = 0;
+        if (resto !== parseInt(limpo.substring(10, 11))) return false;
+        return true;
+    }
+
+    if (limpo.length === 14) {
+        let tamanho = limpo.length - 2
+        let numeros = limpo.substring(0, tamanho);
+        const digitos = limpo.substring(tamanho);
+        let soma = 0, pos = tamanho - 7;
+        for (let i = tamanho; i >= 1; i--) {
+            soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+            if (pos < 2) pos = 9;
+        }
+        let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+        if (resultado !== parseInt(digitos.charAt(0))) return false;
+
+        tamanho = tamanho + 1;
+        numeros = limpo.substring(0, tamanho);
+        soma = 0;
+        pos = tamanho - 7;
+        for (let i = tamanho; i >= 1; i--) {
+            soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+            if (pos < 2) pos = 9;
+        }
+        resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+        if (resultado !== parseInt(digitos.charAt(1))) return false;
+        return true;
+    }
+    return false;
 };
 
 export default function App() {
     const [estados, setEstados] = useState<any[]>([]);
     const [cidades, setCidades] = useState<string[]>([]);
-
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState(ESTADO_INICIAL);
+    const [listaContratos, setListaContratos] = useState<any[]>([]);
+    const [termoPesquisa, setTermoPesquisa] = useState('');
+    
+    // NOVO: Estado para gerenciar erros de validação da Etapa 1
+    const [erros, setErros] = useState<{ cnpj?: string; email?: string; telefone?: string }>({});
 
     //Dados IBGE
     useEffect(() => {
@@ -80,12 +167,6 @@ export default function App() {
             .then((data) => setEstados(data))
             .catch((err) => console.error("Erro ao carregar estados:", err));
     }, []);
-
-
-    // Lista simulando o Banco de Dados de contratos salvos
-    const [listaContratos, setListaContratos] = useState<any[]>([]);
-    const [termoPesquisa, setTermoPesquisa] = useState('');
-
 
     // Atualização dinâmica inteligente de valores
     useEffect(() => {
@@ -121,7 +202,6 @@ export default function App() {
             const response = await fetch(
                 `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`
             );
-
             const data = await response.json();
 
             setCidades(
@@ -132,12 +212,34 @@ export default function App() {
         }
     };
 
+    // NOVO: Interceptador do botão Avançar para validar antes de mudar de etapa
+    const handleAvançarEtapa1 = () => {
+        const novosErros: typeof erros = {};
+
+        if (!validarCpfCnpjReal(formData.cnpj)) {
+            novosErros.cnpj = "CPF ou CNPJ inválido. Verifique os números.";
+        }
+        if (!validarEmail(formData.email)) {
+            novosErros.email = "E-mail inválido. Utilize o formato nome@dominio.com";
+        }
+        if (formData.telefone.replace(/\D/g, '').length < 10) {
+            novosErros.telefone = "Telefone incompleto. Digite o DDD + número.";
+        }
+
+        setErros(novosErros);
+
+        if (Object.keys(novosErros).length === 0) {
+            setCurrentStep(2);
+        }
+    };
+
     // 1. AÇÃO DE CANCELAR / SAIR
     const handleCancelarSair = () => {
         const confirmar = window.confirm("Atenção: Ao sair, todas as alterações não salvas deste formulário serão perdidas. Deseja continuar?");
         if (confirmar) {
             setIsModalOpen(false);
             setFormData(ESTADO_INICIAL);
+            setErros({}); // Limpa erros ao sair
             setCurrentStep(1);
         }
     };
@@ -145,8 +247,6 @@ export default function App() {
     // 2. AÇÃO DE SALVAR RASCUNHO (Permite pesquisar e editar depois)
     const handleSalvarRascunho = () => {
         let contratoSalvo = { ...formData };
-
-        // Se for um novo contrato, gera um ID único, senão mantém o existente para atualizar
         if (!contratoSalvo.id) {
             contratoSalvo.id = Math.random().toString(36).substr(2, 9);
             contratoSalvo.status = 'Rascunho';
@@ -158,13 +258,13 @@ export default function App() {
         alert(`Rascunho de ${contratoSalvo.razaoSocial} salvo com sucesso! Você pode editá-lo na listagem.`);
         setIsModalOpen(false);
         setFormData(ESTADO_INICIAL);
+        setErros({});
         setCurrentStep(1);
     };
 
     // 3. AÇÃO DE CONCLUIR CONTRATO
     const finalizarVendaCompleta = () => {
         let contratoConcluido = { ...formData, status: 'Concluído' };
-
         if (!contratoConcluido.id) {
             contratoConcluido.id = Math.random().toString(36).substr(2, 9);
             setListaContratos([...listaContratos, contratoConcluido]);
@@ -175,19 +275,19 @@ export default function App() {
         alert(`Contrato de ${contratoConcluido.razaoSocial} CONCLUÍDO e finalizado com sucesso!`);
         setIsModalOpen(false);
         setFormData(ESTADO_INICIAL);
+        setErros({});
         setCurrentStep(1);
     };
 
     // 4. FUNÇÃO PARA ABRIR CONTRATO PARA EDIÇÃO
     const handleEditarContrato = async (contrato: any) => {
         setFormData(contrato);
-
+        setErros({});
         if (contrato.uf) {
             try {
                 const response = await fetch(
                     `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${contrato.uf}/municipios`
                 );
-
                 const data = await response.json();
 
                 setCidades(
@@ -202,9 +302,8 @@ export default function App() {
         setIsModalOpen(true);
     };
 
-    // 5. EMISSÃO DO ORÇAMENTO EM PDF (Layout exato do anexo)
+    // 5. EMISSÃO DO ORÇAMENTO EM PDF
     const handleGerarPDF = (contratoParaPdf: any) => {
-        // Monta uma estrutura HTML limpa em uma nova aba configurada para impressão nativa do navegador (Salvar como PDF)
         const totalProposta = contratoParaPdf.valorRecorrencia + contratoParaPdf.valorAdesao;
         const dataHoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -269,17 +368,17 @@ export default function App() {
                         <tbody>
                             <tr>
                                 <td>01</td>
-                                <td>Plano ${formData.recorrencia} ${formData.plano}</td>
+                                <td>Plano ${contratoParaPdf.recorrencia} ${contratoParaPdf.plano}</td>
                                 <td>01</td>
-                                <td>R$ ${formData.valorRecorrencia.toFixed(2)}</td>
-                                <td>R$ ${formData.valorRecorrencia.toFixed(2)}</td>
+                                <td>R$ ${contratoParaPdf.valorRecorrencia.toFixed(2)}</td>
+                                <td>R$ ${contratoParaPdf.valorRecorrencia.toFixed(2)}</td>
                             </tr>
                             <tr>
                                 <td>02</td>
                                 <td>Implantação do sistema</td>
                                 <td>01</td>
-                                <td>R$ ${formData.valorAdesao.toFixed(2)}</td>
-                                <td>R$ ${formData.valorAdesao.toFixed(2)}</td>
+                                <td>R$ ${contratoParaPdf.valorAdesao.toFixed(2)}</td>
+                                <td>R$ ${contratoParaPdf.valorAdesao.toFixed(2)}</td>
                             </tr>
                             <tr class="total-row">
                                 <td colspan="4" style="text-align: right;">VALOR TOTAL DA PROPOSTA:</td>
@@ -291,7 +390,7 @@ export default function App() {
                     <div class="footer-info">
                         <p><strong>Prazo/Data de entrega:</strong> Imediato após assinatura do contrato</p>
                         <p><strong>Validade da proposta:</strong> 07 dias</p>
-                        <p><strong>Forma de pagamento:</strong> ${formData.formaRecorrencia}</p>
+                        <p><strong>Forma de pagamento:</strong> ${contratoParaPdf.formaRecorrencia}</p>
                     </div>
                 </body>
                 </html>
@@ -300,7 +399,6 @@ export default function App() {
         }
     };
 
-    // Filtro dinâmico de pesquisa de clientes salvos
     const contratosFiltrados = listaContratos.filter(c =>
         c.razaoSocial.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
         c.cnpj.includes(termoPesquisa)
@@ -317,19 +415,18 @@ export default function App() {
                 </nav>
             </aside>
 
-            {/* CONTEÚDO PRINCIPAL (COM BUSCA E TABELA DE CONTRATOS) */}
+            {/* CONTEÚDO PRINCIPAL */}
             <main className="flex-1 p-8 overflow-y-auto">
                 <header className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-bold text-slate-900">Gestão de Contratos</h1>
                     <button
-                        onClick={() => { setFormData(ESTADO_INICIAL); setCurrentStep(1); setIsModalOpen(true); }}
+                        onClick={() => { setFormData(ESTADO_INICIAL); setErros({}); setCurrentStep(1); setIsModalOpen(true); }}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
                     >
                         + Novo Contrato
                     </button>
                 </header>
 
-                {/* BARRA DE PESQUISA DE NEGOCIAÇÕES */}
                 <div className="mb-6">
                     <input
                         type="text"
@@ -340,7 +437,6 @@ export default function App() {
                     />
                 </div>
 
-                {/* LISTAGEM DE CONTRATOS ATIVOS / RASCUNHOS */}
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-xs uppercase">
@@ -370,51 +466,12 @@ export default function App() {
                                         </td>
                                         <td className="p-4 text-center">
                                             <div className="flex items-center justify-center space-x-3">
-
-                                                {/* Editar */}
-                                                <button
-                                                    onClick={() => handleEditarContrato(contrato)}
-                                                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                                    title="Editar Valores"
-                                                >
-                                                    <svg
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        strokeWidth={2}
-                                                        stroke="currentColor"
-                                                        className="w-4 h-4"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-                                                        />
-                                                    </svg>
+                                                <button onClick={() => handleEditarContrato(contrato)} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Editar Valores">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
                                                 </button>
-
-                                                {/* PDF */}
-                                                <button
-                                                    onClick={() => handleGerarPDF(contrato)}
-                                                    className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                    title="Gerar PDF"
-                                                >
-                                                    <svg
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        strokeWidth={2}
-                                                        stroke="currentColor"
-                                                        className="w-4 h-4"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                                                        />
-                                                    </svg>
+                                                <button onClick={() => handleGerarPDF(contrato)} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Gerar PDF">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
                                                 </button>
-
                                             </div>
                                         </td>
                                     </tr>
@@ -447,15 +504,36 @@ export default function App() {
                                         </div>
                                         <div>
                                             <label className="block text-xs font-semibold text-slate-600 mb-1">CNPJ / CPF *</label>
-                                            <input type="text" className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.cnpj} onChange={e => setFormData({ ...formData, cnpj: e.target.value })} />
+                                            <input 
+                                                type="text" 
+                                                placeholder="00.000.000/0001-00 ou 000.000.000-00"
+                                                className={`w-full bg-slate-50 border rounded p-2 text-sm text-slate-800 ${erros.cnpj ? 'border-red-500 bg-red-50' : 'border-slate-300'}`} 
+                                                value={formData.cnpj} 
+                                                onChange={e => setFormData({ ...formData, cnpj: aplicarMascaraCpfCnpj(e.target.value) })} 
+                                            />
+                                            {erros.cnpj && <p className="text-red-500 text-xs mt-1 font-medium">{erros.cnpj}</p>}
                                         </div>
                                         <div>
                                             <label className="block text-xs font-semibold text-slate-600 mb-1">E-mail *</label>
-                                            <input type="email" className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                                            <input 
+                                                type="email" 
+                                                placeholder="exemplo@prociber.com.br"
+                                                className={`w-full bg-slate-50 border rounded p-2 text-sm text-slate-800 ${erros.email ? 'border-red-500 bg-red-50' : 'border-slate-300'}`} 
+                                                value={formData.email} 
+                                                onChange={e => setFormData({ ...formData, email: e.target.value })} 
+                                            />
+                                            {erros.email && <p className="text-red-500 text-xs mt-1 font-medium">{erros.email}</p>}
                                         </div>
                                         <div>
                                             <label className="block text-xs font-semibold text-slate-600 mb-1">Telefone / Celular *</label>
-                                            <input type="text" placeholder="(00) 00000-0000" className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm text-slate-800" value={formData.telefone} onChange={e => setFormData({ ...formData, telefone: e.target.value })} />
+                                            <input 
+                                                type="text" 
+                                                placeholder="(45) 99999-0000" 
+                                                className={`w-full bg-slate-50 border rounded p-2 text-sm text-slate-800 ${erros.telefone ? 'border-red-500 bg-red-50' : 'border-slate-300'}`} 
+                                                value={formData.telefone} 
+                                                onChange={e => setFormData({ ...formData, telefone: aplicarMascaraTelefone(e.target.value) })} 
+                                            />
+                                            {erros.telefone && <p className="text-red-500 text-xs mt-1 font-medium">{erros.telefone}</p>}
                                         </div>
                                         <div>
                                             <label className="block text-xs font-semibold text-slate-600 mb-1">Estado (UF) *</label>
@@ -474,7 +552,13 @@ export default function App() {
                                     </div>
                                     <div className="flex justify-between pt-4 border-t border-slate-100">
                                         <button onClick={handleCancelarSair} className="text-red-500 hover:text-red-700 text-sm font-medium">Cancelar</button>
-                                        <button onClick={() => setCurrentStep(2)} disabled={!formData.razaoSocial || !formData.cnpj || !formData.cidade} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded text-sm shadow-sm">Avançar para Venda →</button>
+                                        <button 
+                                            onClick={handleAvançarEtapa1} 
+                                            disabled={!formData.razaoSocial || !formData.cnpj || !formData.cidade} 
+                                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded text-sm shadow-sm"
+                                        >
+                                            Avançar para Venda →
+                                        </button>
                                     </div>
                                 </div>
                             )}
@@ -580,12 +664,12 @@ export default function App() {
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-700 mb-1">Valor de Recorrência (R$) *</label>
-                                                <input type="number" step="0.01" className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold" value={formData.valorRecorrencia} onChange={e => setFormData({ ...formData, valorRecorrencia: Number(e.target.value) })} />
+                                                <input type="number" step="0.01" className="w-full bg-white border border-blue-400 rounded p-2 text-sm text-slate-900 font-bold" value={formData.valorRecorrencia} onChange={e => setFormData({ ...formData, valorRecorrencia: Number(e.target.value), valorAdesao: Number((Number(e.target.value) * 0.4).toFixed(2)) })} />
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* CONTROLES E NOVOS BOTÕES */}
+                                    {/* CONTROLES E BOTÕES */}
                                     <div className="flex justify-between pt-4 border-t border-slate-100 items-center">
                                         <button onClick={handleCancelarSair} className="text-red-500 hover:text-red-700 text-sm font-medium">
                                             Cancelar
@@ -595,18 +679,12 @@ export default function App() {
                                             <button onClick={() => setCurrentStep(2)} className="text-slate-500 hover:text-slate-800 text-sm font-medium px-3">
                                                 Voltar
                                             </button>
-
-                                            {/* NOVO: BOTÃO EMITIR PDF */}
                                             <button onClick={() => handleGerarPDF(formData)} className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded text-sm shadow-sm">
                                                 Emitir PDF 📄
                                             </button>
-
-                                            {/* NOVO: BOTÃO SALVAR RASCUNHO */}
                                             <button onClick={handleSalvarRascunho} className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded text-sm shadow-sm">
                                                 Salvar Rascunho 💾
                                             </button>
-
-                                            {/* ALTERADO: NOMENCLATURA CONCLUIR */}
                                             <button onClick={finalizarVendaCompleta} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded text-sm shadow-sm">
                                                 Concluir ✓
                                             </button>
