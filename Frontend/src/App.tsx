@@ -248,9 +248,9 @@ export default function App() {
 
                     <div class="section-title">Dados do fornecedor</div>
                     <div class="grid-dados">
-                        <div class="label">Nome da empresa:</div><div class="value">Próciber Tecnologia Ltda.</div>
+                        <div class="label">Nome da empresa:</div><div class="value">Prociber Tecnologia Ltda.</div>
                         <div class="label">CNPJ:</div><div class="value">45.656.922/0001-90</div>
-                        <div class="label">Endereço:</div><div class="value">Rua Antonina 1174</div>
+                        <div class="label">Endereço:</div><div class="value">Rua Antonina 1174 - Sala 03</div>
                         <div class="label">Telefone:</div><div class="value">(45) 3112-0017</div>
                         <div class="label">E-mail:</div><div class="value">comercial@prociber.com.br</div>
                     </div>
